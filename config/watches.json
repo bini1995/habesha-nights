@@ -1,0 +1,22 @@
+[
+  {
+    "id": "odyssey-imax",
+    "provider": "AMC",
+    "type": "Movie Tickets",
+    "enabled": true,
+    "movie": "The Odyssey",
+    "theater": "AMC Lincoln Square 13",
+    "pageUrl": "https://www.amctheatres.com/movie-theatres/new-york-city/amc-lincoln-square-13/showtimes",
+    "format": "IMAX 70MM"
+  },
+  {
+    "id": "deadpool-test",
+    "provider": "AMC",
+    "type": "Movie Tickets",
+    "enabled": true,
+    "movie": "Deadpool",
+    "theater": "AMC Empire 25",
+    "format": "IMAX",
+    "pageUrl": "https://example.com"
+  }
+]

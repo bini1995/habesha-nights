@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    >
+
+    <title>NYC Opportunity Agent</title>
+
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+
+  <body>
+    <header>
+      <div>
+        <h1>NYC Opportunity Agent</h1>
+
+        <div class="subtitle">
+          Operations console for tickets, reservations,
+          events, and other high-value opportunities.
+        </div>
+
+        <div class="connection">
+          <span
+            class="connection-dot"
+            id="connection-dot"
+          ></span>
+
+          <span id="connection-text">
+            Connecting to application...
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div
+        class="error-message"
+        id="error-message"
+      >
+        The dashboard could not retrieve the latest
+        application state.
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="label">Monitor status</div>
+
+          <div
+            class="value"
+            id="monitor-status"
+          >
+            Loading...
+          </div>
+
+          <div
+            class="status idle"
+            id="monitor-status-chip"
+          >
+            Loading
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Active watches</div>
+
+          <div
+            class="value"
+            id="active-watches"
+          >
+            0
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Total checks</div>
+
+          <div
+            class="value"
+            id="total-checks"
+          >
+            0
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Notifications sent</div>
+
+          <div
+            class="value"
+            id="notifications-sent"
+          >
+            0
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Last check</div>
+
+          <div
+            class="value small-value"
+            id="last-check"
+          >
+            Never
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Next check</div>
+
+          <div
+            class="value small-value"
+            id="next-check"
+          >
+            Not scheduled
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Rate limits</div>
+
+          <div
+            class="value"
+            id="rate-limits"
+          >
+            0
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">Errors</div>
+
+          <div
+            class="value"
+            id="errors"
+          >
+            0
+          </div>
+        </div>
+      </div>
+
+      <div class="section-heading">
+        <h2>Current watches</h2>
+
+        <button
+          type="button"
+          onclick="
+            document
+              .getElementById('watch-form')
+              .hidden = false;
+          "
+        >
+          + Add Watch
+        </button>
+      </div>
+
+      <form
+        class="watch-form"
+        id="watch-form"
+        hidden
+        onsubmit="createWatch(event)"
+      >
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="watch-id">Watch ID</label>
+            <input
+              id="watch-id"
+              name="id"
+              placeholder="wicked-broadway"
+              required
+            >
+          </div>
+
+          <div class="form-field">
+            <label for="watch-movie">Movie or event</label>
+            <input
+              id="watch-movie"
+              name="movie"
+              placeholder="Wicked"
+              required
+            >
+          </div>
+
+          <div class="form-field">
+            <label for="watch-theater">Theater or location</label>
+            <input
+              id="watch-theater"
+              name="theater"
+              placeholder="AMC Lincoln Square 13"
+              required
+            >
+          </div>
+
+          <div class="form-field">
+            <label for="watch-format">Format</label>
+            <input
+              id="watch-format"
+              name="format"
+              placeholder="IMAX 70MM"
+            >
+          </div>
+
+          <div class="form-field">
+            <label for="watch-url">Page URL</label>
+            <input
+              id="watch-url"
+              name="pageUrl"
+              type="url"
+              placeholder="https://example.com"
+              required
+            >
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit">
+            Save Watch
+          </button>
+
+          <button
+            class="secondary-button"
+            type="button"
+            onclick="
+              document
+                .getElementById('watch-form')
+                .hidden = true;
+            "
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+
+      <div
+        class="watch-list"
+        id="watch-list"
+      >
+        <div class="empty-state">
+          Loading watches...
+        </div>
+      </div>
+
+      <h2>Recent activity</h2>
+
+      <div
+        class="event-list"
+        id="event-list"
+      >
+        <div class="empty-state">
+          Loading recent activity...
+        </div>
+      </div>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

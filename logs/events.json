@@ -1,0 +1,68 @@
+[
+  {
+    "timestamp": "2026-07-28T01:35:06.543Z",
+    "type": "NO_CHANGES",
+    "title": "The Odyssey checked successfully",
+    "message": "No new ticket availability was detected."
+  },
+  {
+    "timestamp": "2026-07-28T00:53:13.433Z",
+    "type": "SHOWTIME_REMOVED",
+    "title": "Showtime removed",
+    "message": "6:00pm is no longer listed."
+  },
+  {
+    "timestamp": "2026-07-27T22:07:04.289Z",
+    "type": "NO_CHANGES",
+    "title": "The Odyssey checked successfully",
+    "message": "No new ticket availability was detected."
+  },
+  {
+    "timestamp": "2026-07-27T21:57:59.800Z",
+    "type": "NO_CHANGES",
+    "title": "The Odyssey checked successfully",
+    "message": "No new ticket availability was detected."
+  },
+  {
+    "timestamp": "2026-07-27T21:36:50.287Z",
+    "type": "NO_CHANGES",
+    "title": "The Odyssey checked successfully",
+    "message": "No new ticket availability was detected."
+  },
+  {
+    "timestamp": "2026-07-27T21:31:02.808Z",
+    "type": "NO_CHANGES",
+    "title": "The Odyssey checked successfully",
+    "message": "No new ticket availability was detected."
+  },
+  {
+    "timestamp": "2026-07-27T21:16:31.434Z",
+    "type": "NO_CHANGES",
+    "title": "The Odyssey checked successfully",
+    "message": "No new ticket availability was detected."
+  },
+  {
+    "timestamp": "2026-07-27T20:48:40.143Z",
+    "type": "NO_CHANGES",
+    "title": "The Odyssey checked successfully",
+    "message": "No new ticket availability was detected."
+  },
+  {
+    "timestamp": "2026-07-27T20:29:09.588Z",
+    "type": "NEW_SHOWTIME",
+    "title": "New IMAX 70MM showtime released",
+    "message": "The Odyssey has a new IMAX 70MM showtime at 6:00pm."
+  },
+  {
+    "timestamp": "2026-07-27T05:08:46.249Z",
+    "type": "ERROR",
+    "title": "The Odyssey check failed",
+    "message": "Could not find \"IMAX 70MM\". Formats found: "
+  },
+  {
+    "timestamp": "2026-07-27T05:03:35.475Z",
+    "type": "ERROR",
+    "title": "The Odyssey check failed",
+    "message": "Could not find the IMAX 70MM format for The Odyssey."
+  }
+]
