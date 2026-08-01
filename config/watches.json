@@ -7,7 +7,8 @@
     "movie": "The Odyssey",
     "theater": "AMC Lincoln Square 13",
     "pageUrl": "https://www.amctheatres.com/movie-theatres/new-york-city/amc-lincoln-square-13/showtimes",
-    "format": "IMAX 70MM"
+    "format": "IMAX 70MM",
+    "maxDatesToScan": 14
   },
   {
     "id": "deadpool-test",
