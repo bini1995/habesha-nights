@@ -14,7 +14,7 @@
     "id": "deadpool-test",
     "provider": "AMC",
     "type": "Movie Tickets",
-    "enabled": true,
+    "enabled": false,
     "movie": "Deadpool",
     "theater": "AMC Empire 25",
     "format": "IMAX",

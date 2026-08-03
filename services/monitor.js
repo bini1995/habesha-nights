@@ -20,7 +20,6 @@ const {
   saveSnapshot
 } = require("./snapshot-store");
 
-
 const {
   sendEventEmail
 } = require("./email");
@@ -32,98 +31,121 @@ const {
   addEvent
 } = require("./state");
 
-async function runMonitor() {
-  const watches = getEnabledWatches();
+const WATCH_DELAY_MILLISECONDS = 2000;
 
-  setWatches(watches);
+function wait(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
 
-  if (watches.length === 0) {
-    updateMonitor({
-      status: "Idle",
-      lastResult: "No enabled watches"
-    });
+function getWatchLabel(watch) {
+  return (
+    watch.movie ??
+    watch.name ??
+    watch.id ??
+    "Unknown watch"
+  );
+}
 
-    addEvent({
-      type: "NO_WATCHES",
-      title: "No enabled watches",
-      message:
-        "Add or enable a watch before running the monitor."
-    });
+function isWatcherError(
+  watcher,
+  error,
+  errorClassName
+) {
+  const ErrorClass =
+    watcher?.[errorClassName];
 
-    return {
-      status: "NO_WATCHES"
-    };
-  }
+  return (
+    typeof ErrorClass === "function" &&
+    error instanceof ErrorClass
+  );
+}
 
-  const watch = watches[0];
-  const watcher = getWatcher(watch.provider);
+async function runSingleWatch(watch) {
+  const label = getWatchLabel(watch);
   const checkedAt = new Date().toISOString();
 
   incrementStat("totalChecks");
 
-  updateMonitor({
-    status: "Checking",
-    lastCheck: checkedAt,
-    lastResult: null
-  });
-
   console.log("");
   console.log(
-    `[${new Date().toLocaleString()}] Checking ${watch.movie}...`
+    `[${new Date().toLocaleString()}] ` +
+    `Checking ${label} (${watch.id})...`
   );
 
+  let watcher;
+
   try {
-    const previous = await loadLatestSnapshot();
+    watcher = getWatcher(
+      watch.provider
+    );
+
+    const previous =
+      await loadLatestSnapshot(watch);
 
     let current;
 
     try {
-      current = await watcher.runWatcher(watch);
+      current =
+        await watcher.runWatcher(watch);
     } catch (error) {
       if (
-        watcher.RateLimitError &&
-        error instanceof watcher.RateLimitError
+        isWatcherError(
+          watcher,
+          error,
+          "RateLimitError"
+        )
       ) {
-        console.log("AMC rate limited this check.");
+        console.log(
+          `${watch.provider} rate limited ` +
+          `${watch.id}.`
+        );
 
         incrementStat("rateLimits");
 
-        updateMonitor({
-          status: "Idle",
-          lastResult: "Rate limited"
-        });
-
         addEvent({
           type: "RATE_LIMITED",
-          title: `${watch.movie} check was rate limited`,
+          watchId: watch.id,
+          title:
+            `${label} check was rate limited`,
           message:
-            "The previous snapshot was preserved and the scheduler will use the longer retry interval."
+            "The previous snapshot was preserved. " +
+            "Other watches using this provider will " +
+            "be skipped until the next scheduled run."
         });
 
         return {
+          watchId: watch.id,
+          provider: watch.provider,
+          checkedAt,
           status: "RATE_LIMITED"
         };
       }
 
       if (
-        watcher.NoShowtimesError &&
-        error instanceof watcher.NoShowtimesError
+        isWatcherError(
+          watcher,
+          error,
+          "NoShowtimesError"
+        )
       ) {
         console.log(error.message);
 
-        updateMonitor({
-          status: "Idle",
-          lastResult: "No showtimes today"
-        });
-
         addEvent({
           type: "NO_SHOWTIMES",
-          title: `${watch.movie} has no showtimes`,
+          watchId: watch.id,
+          title:
+            `${label} has no matching showtimes`,
           message: error.message
         });
 
         return {
-          status: "NO_SHOWTIMES"
+          watchId: watch.id,
+          provider: watch.provider,
+          checkedAt,
+          status: "NO_SHOWTIMES",
+          message: error.message
         };
       }
 
@@ -131,29 +153,36 @@ async function runMonitor() {
     }
 
     if (!previous) {
-      console.log("Saving initial snapshot...");
+      console.log(
+        `Saving initial snapshot for ${watch.id}...`
+      );
 
       await saveSnapshot({
         watch,
         result: current
       });
 
-      incrementStat("successfulChecks");
-
-      updateMonitor({
-        status: "Idle",
-        lastResult: "Initial snapshot saved"
-      });
+      incrementStat(
+        "successfulChecks"
+      );
 
       addEvent({
         type: "INITIALIZED",
-        title: `${watch.movie} watch initialized`,
+        watchId: watch.id,
+        title:
+          `${label} watch initialized`,
         message:
-          "The first snapshot was saved. Future checks will be compared against it."
+          "The first snapshot was saved. " +
+          "Future checks will be compared against it."
       });
 
       return {
-        status: "INITIALIZED"
+        watchId: watch.id,
+        provider: watch.provider,
+        checkedAt,
+        status: "INITIALIZED",
+        showtimeCount:
+          current.showtimeCount ?? 0
       };
     }
 
@@ -163,28 +192,35 @@ async function runMonitor() {
     );
 
     if (changes.length === 0) {
-      console.log("No changes.");
+      console.log(
+        `No changes for ${watch.id}.`
+      );
 
       await saveSnapshot({
         watch,
         result: current
       });
 
-      incrementStat("successfulChecks");
-
-      updateMonitor({
-        status: "Idle",
-        lastResult: "No changes"
-      });
+      incrementStat(
+        "successfulChecks"
+      );
 
       addEvent({
         type: "NO_CHANGES",
-        title: `${watch.movie} checked successfully`,
-        message: "No new ticket availability was detected."
+        watchId: watch.id,
+        title:
+          `${label} checked successfully`,
+        message:
+          "No new ticket availability was detected."
       });
 
       return {
-        status: "NO_CHANGES"
+        watchId: watch.id,
+        provider: watch.provider,
+        checkedAt,
+        status: "NO_CHANGES",
+        showtimeCount:
+          current.showtimeCount ?? 0
       };
     }
 
@@ -198,10 +234,13 @@ async function runMonitor() {
 
     for (const event of events) {
       addEvent({
-        type: event.type ?? "WATCH_EVENT",
+        type:
+          event.type ??
+          "WATCH_EVENT",
+        watchId: watch.id,
         title:
           event.title ??
-          `${watch.movie} activity detected`,
+          `${label} activity detected`,
         message:
           event.message ??
           event.description ??
@@ -219,54 +258,240 @@ async function runMonitor() {
       for (
         let index = 0;
         index < notifiable.length;
-        index++
+        index += 1
       ) {
-        incrementStat("notificationsSent");
+        incrementStat(
+          "notificationsSent"
+        );
       }
 
       console.log(
-        `Sent ${notifiable.length} notification(s).`
+        `Sent ${notifiable.length} notification(s) ` +
+        `for ${watch.id}.`
       );
     }
 
     await saveSnapshot({
-        watch,
-        result: current
-      });
-
-    incrementStat("successfulChecks");
-
-    updateMonitor({
-      status: "Idle",
-      lastResult:
-        `${changes.length} change(s), ` +
-        `${notifiable.length} notification(s)`
+      watch,
+      result: current
     });
 
+    incrementStat(
+      "successfulChecks"
+    );
+
     return {
+      watchId: watch.id,
+      provider: watch.provider,
+      checkedAt,
       status: "CHANGES_FOUND",
       changes: changes.length,
       events: events.length,
-      notifications: notifiable.length
+      notifications:
+        notifiable.length,
+      showtimeCount:
+        current.showtimeCount ?? 0
     };
   } catch (error) {
     incrementStat("errors");
 
-    updateMonitor({
-      status: "Error",
-      lastResult: error.message
-    });
+    console.error(
+      `Watch ${watch.id} failed:`
+    );
+    console.error(error);
 
     addEvent({
       type: "ERROR",
-      title: `${watch.movie} check failed`,
+      watchId: watch.id,
+      title:
+        `${label} check failed`,
       message: error.message
     });
 
-    throw error;
+    return {
+      watchId: watch.id,
+      provider: watch.provider,
+      checkedAt,
+      status: "ERROR",
+      error: error.message
+    };
   }
 }
 
+function summarizeResults(results) {
+  const counts = {};
+
+  for (const result of results) {
+    counts[result.status] =
+      (counts[result.status] ?? 0) + 1;
+  }
+
+  return Object.entries(counts)
+    .map(([status, count]) => {
+      return `${count} ${status}`;
+    })
+    .join(", ");
+}
+
+async function runMonitor() {
+  const watches =
+    getEnabledWatches();
+
+  setWatches(watches);
+
+  if (watches.length === 0) {
+    updateMonitor({
+      status: "Idle",
+      lastResult:
+        "No enabled watches"
+    });
+
+    addEvent({
+      type: "NO_WATCHES",
+      title: "No enabled watches",
+      message:
+        "Add or enable a watch before running the monitor."
+    });
+
+    return {
+      status: "NO_WATCHES",
+      results: []
+    };
+  }
+
+  const checkedAt =
+    new Date().toISOString();
+
+  updateMonitor({
+    status: "Checking",
+    lastCheck: checkedAt,
+    lastResult: null
+  });
+
+  const results = [];
+  const rateLimitedProviders =
+    new Set();
+
+  for (
+    let index = 0;
+    index < watches.length;
+    index += 1
+  ) {
+    const watch = watches[index];
+
+    const normalizedProvider =
+      String(
+        watch.provider ?? ""
+      )
+        .trim()
+        .toUpperCase();
+
+    if (
+      rateLimitedProviders.has(
+        normalizedProvider
+      )
+    ) {
+      console.log("");
+      console.log(
+        `Skipping ${watch.id} because ` +
+        `${watch.provider} was rate limited earlier ` +
+        `in this run.`
+      );
+
+      results.push({
+        watchId: watch.id,
+        provider: watch.provider,
+        checkedAt:
+          new Date().toISOString(),
+        status:
+          "SKIPPED_RATE_LIMITED"
+      });
+
+      continue;
+    }
+
+    const result =
+      await runSingleWatch(watch);
+
+    results.push(result);
+
+    if (
+      result.status ===
+      "RATE_LIMITED"
+    ) {
+      rateLimitedProviders.add(
+        normalizedProvider
+      );
+    }
+
+    const hasAnotherWatch =
+      index < watches.length - 1;
+
+    if (hasAnotherWatch) {
+      await wait(
+        WATCH_DELAY_MILLISECONDS
+      );
+    }
+  }
+
+  const summary =
+    summarizeResults(results);
+
+  const errorCount =
+    results.filter(
+      (result) =>
+        result.status === "ERROR"
+    ).length;
+
+  const rateLimitCount =
+    results.filter(
+      (result) =>
+        result.status ===
+          "RATE_LIMITED" ||
+        result.status ===
+          "SKIPPED_RATE_LIMITED"
+    ).length;
+
+  updateMonitor({
+    status:
+      errorCount > 0
+        ? "Error"
+        : "Idle",
+    lastResult: summary
+  });
+
+  console.log("");
+  console.log(
+    `Monitor run complete: ${summary}`
+  );
+
+  if (rateLimitCount > 0) {
+    return {
+      status: "RATE_LIMITED",
+      checkedAt,
+      summary,
+      results
+    };
+  }
+
+  if (errorCount > 0) {
+    return {
+      status: "PARTIAL_FAILURE",
+      checkedAt,
+      summary,
+      results
+    };
+  }
+
+  return {
+    status: "COMPLETED",
+    checkedAt,
+    summary,
+    results
+  };
+}
+
 module.exports = {
-  runMonitor
+  runMonitor,
+  runSingleWatch
 };
