@@ -12,12 +12,51 @@ const SNAPSHOTS_DIRECTORY = path.join(
   "snapshots"
 );
 
-const LATEST_SNAPSHOT_FILE = path.join(
+const LATEST_SNAPSHOTS_DIRECTORY = path.join(
+  LOGS_DIRECTORY,
+  "latest"
+);
+
+const LEGACY_LATEST_SNAPSHOT_FILE = path.join(
   LOGS_DIRECTORY,
   "latest-showtimes.json"
 );
 
 const DEFAULT_MAX_SNAPSHOTS = 100;
+
+function getSafeWatchId(watchOrId) {
+  const rawWatchId =
+    typeof watchOrId === "string"
+      ? watchOrId
+      : watchOrId?.id;
+
+  if (!rawWatchId) {
+    throw new Error(
+      "A watch id is required for snapshot storage."
+    );
+  }
+
+  const safeWatchId = String(rawWatchId)
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  if (!safeWatchId) {
+    throw new Error(
+      `Watch id "${rawWatchId}" cannot be used as a filename.`
+    );
+  }
+
+  return safeWatchId;
+}
+
+function getLatestSnapshotFile(watchOrId) {
+  return path.join(
+    LATEST_SNAPSHOTS_DIRECTORY,
+    `${getSafeWatchId(watchOrId)}.json`
+  );
+}
 
 function createSnapshotFilename(snapshot) {
   const checkedAt =
@@ -28,12 +67,11 @@ function createSnapshotFilename(snapshot) {
     .replace(/:/g, "-")
     .replace(/\./g, "-");
 
-  const watchId = String(
-    snapshot.watchId ?? "watch"
-  )
-    .replace(/[^a-zA-Z0-9_-]/g, "-");
+  const safeWatchId = getSafeWatchId(
+    snapshot.watchId
+  );
 
-  return `${safeTimestamp}-${watchId}.json`;
+  return `${safeTimestamp}-${safeWatchId}.json`;
 }
 
 async function writeJson(filePath, value) {
@@ -56,10 +94,13 @@ async function writeJson(filePath, value) {
   );
 }
 
-async function loadLatestSnapshot() {
+async function loadLatestSnapshot(watchOrId) {
+  const latestSnapshotFile =
+    getLatestSnapshotFile(watchOrId);
+
   try {
     const data = await fs.readFile(
-      LATEST_SNAPSHOT_FILE,
+      latestSnapshotFile,
       "utf8"
     );
 
@@ -74,7 +115,8 @@ async function loadLatestSnapshot() {
 }
 
 async function cleanupSnapshots({
-  maxSnapshots = DEFAULT_MAX_SNAPSHOTS
+  maxSnapshots = DEFAULT_MAX_SNAPSHOTS,
+  watchId = null
 } = {}) {
   await fs.mkdir(
     SNAPSHOTS_DIRECTORY,
@@ -90,11 +132,25 @@ async function cleanupSnapshots({
     }
   );
 
+  const safeWatchId = watchId
+    ? getSafeWatchId(watchId)
+    : null;
+
   const snapshotFiles = entries
     .filter((entry) => {
-      return (
-        entry.isFile() &&
-        entry.name.endsWith(".json")
+      if (
+        !entry.isFile() ||
+        !entry.name.endsWith(".json")
+      ) {
+        return false;
+      }
+
+      if (!safeWatchId) {
+        return true;
+      }
+
+      return entry.name.endsWith(
+        `-${safeWatchId}.json`
       );
     })
     .map((entry) => entry.name)
@@ -129,12 +185,18 @@ async function saveSnapshot({
   result,
   maxSnapshots = DEFAULT_MAX_SNAPSHOTS
 }) {
+  if (!watch?.id) {
+    throw new Error(
+      "A watch with an id is required to save a snapshot."
+    );
+  }
+
   const savedAt = new Date().toISOString();
 
   const snapshot = {
-    snapshotVersion: 1,
+    snapshotVersion: 2,
     savedAt,
-    watchId: watch.id ?? null,
+    watchId: watch.id,
     provider: watch.provider ?? null,
     sourceUrl: watch.pageUrl ?? null,
     theater:
@@ -172,24 +234,28 @@ async function saveSnapshot({
     filename
   );
 
+  const latestPath =
+    getLatestSnapshotFile(watch);
+
   await writeJson(
     historicalPath,
     snapshot
   );
 
   await writeJson(
-    LATEST_SNAPSHOT_FILE,
+    latestPath,
     result
   );
 
   await cleanupSnapshots({
-    maxSnapshots
+    maxSnapshots,
+    watchId: watch.id
   });
 
   return {
     snapshot,
     historicalPath,
-    latestPath: LATEST_SNAPSHOT_FILE
+    latestPath
   };
 }
 
@@ -197,6 +263,8 @@ module.exports = {
   loadLatestSnapshot,
   saveSnapshot,
   cleanupSnapshots,
-  LATEST_SNAPSHOT_FILE,
+  getLatestSnapshotFile,
+  LEGACY_LATEST_SNAPSHOT_FILE,
+  LATEST_SNAPSHOTS_DIRECTORY,
   SNAPSHOTS_DIRECTORY
 };
