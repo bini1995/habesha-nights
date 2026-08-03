@@ -101,3 +101,19 @@ Apartment listings
 Product availability
 Flight price changes
 The goal is to create a general opportunity detection platform.
+
+## Docker
+
+Build and start the application:
+
+```bash
+docker compose build
+docker compose up -d
+Check status:
+docker compose ps
+View logs:
+docker compose logs -f
+Stop:
+docker compose down
+The dashboard is available at:
+http://localhost:3000

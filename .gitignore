@@ -1,6 +1,15 @@
 .env
+
 node_modules/
+
 logs/
 backups/
+
+*.log
 *.bak
+*.tmp
+
 .DS_Store
+
+.env.*
+!.env.example
