@@ -1,3 +1,4 @@
+const watchesRouter = require("../routes/watches");
 const express = require("express");
 const Path = require("path");
 const testRouter = require("../routes/test");
@@ -30,73 +31,7 @@ function createDashboardServer({
 
   app.use("/api/providers", providersRouter);
   app.use("/api/events", eventsRouter);
-
-  app.get("/api/watches", (request, response) => {
-    try {
-      response.json({
-        watches: getAllWatches()
-      });
-    } catch (error) {
-      console.error("Could not load watches:");
-      console.error(error);
-
-      response.status(500).json({
-        error: "Could not load watches."
-      });
-    }
-  });
-
-  app.post("/api/watches", (request, response) => {
-    try {
-      const watch = createWatch(request.body);
-
-      response.status(201).json({
-        watch
-      });
-    } catch (error) {
-      response.status(400).json({
-        error: error.message
-      });
-    }
-  });
-
-  app.patch("/api/watches/:id/enabled", (request, response) => {
-    try {
-      const watch = setWatchEnabled(
-        request.params.id,
-        request.body.enabled
-      );
-
-      response.json({
-        watch
-      });
-    } catch (error) {
-      const status =
-        error.message.startsWith("No watch found")
-          ? 404
-          : 400;
-
-      response.status(status).json({
-        error: error.message
-      });
-    }
-  });
-
-  app.delete("/api/watches/:id", (request, response) => {
-    try {
-      const deletedWatch = deleteWatch(
-        request.params.id
-      );
-
-      response.json({
-        watch: deletedWatch
-      });
-    } catch (error) {
-      response.status(404).json({
-        error: error.message
-      });
-    }
-  });
+  app.use("/api/watches", watchesRouter);
 
   app.use(
     express.static(
