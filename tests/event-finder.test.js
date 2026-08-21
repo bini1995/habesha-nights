@@ -26,6 +26,9 @@ const {
   createQualityStore
 } = require("../products/event-finder/services/quality-store");
 const {
+  createQualityHistoryStore
+} = require("../products/event-finder/services/quality-history-store");
+const {
   createEventFinderRouter
 } = require("../products/event-finder");
 
@@ -212,6 +215,9 @@ test("refresh and filtered read endpoints use the persisted catalog", async (con
     qualityStore: createQualityStore({
       file: path.join(directory, "quality.json")
     }),
+    qualityHistoryStore: createQualityHistoryStore({
+      file: path.join(directory, "quality-history.json")
+    }),
     sourceRegistry
   }));
   const server = app.listen(0);
@@ -225,6 +231,10 @@ test("refresh and filtered read endpoints use the persisted catalog", async (con
   const refresh = await fetch(`${baseUrl}/refresh`, { method: "POST" });
   assert.equal(refresh.status, 200);
   assert.equal((await refresh.json()).count, 2);
+  const history = await (await fetch(`${baseUrl}/quality/history`)).json();
+  assert.equal(history.count, 1);
+  assert.equal(history.entries[0].normalizedCount, 2);
+  assert.equal(history.entries[0].rejectedCount, 0);
 
   const read = await fetch(`${baseUrl}/events?borough=brooklyn&category=music`);
   const body = await read.json();

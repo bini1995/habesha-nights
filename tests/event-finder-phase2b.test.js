@@ -12,6 +12,7 @@ const { recommendEvents } = require("../products/event-finder/domain/recommendat
 const { createCatalogStore } = require("../products/event-finder/services/catalog-store");
 const { createPreferencesStore } = require("../products/event-finder/services/preferences-store");
 const { createQualityStore } = require("../products/event-finder/services/quality-store");
+const { createQualityHistoryStore } = require("../products/event-finder/services/quality-history-store");
 const { createSavedEventsStore } = require("../products/event-finder/services/saved-events-store");
 const { createSourceRegistry } = require("../products/event-finder/services/source-registry");
 
@@ -41,6 +42,9 @@ async function stores(context) {
     catalogStore: createCatalogStore({ catalogFile: path.join(directory, "catalog.json") }),
     preferencesStore: createPreferencesStore({ file: path.join(directory, "preferences.json") }),
     qualityStore: createQualityStore({ file: path.join(directory, "quality.json") }),
+    qualityHistoryStore: createQualityHistoryStore({
+      file: path.join(directory, "quality-history.json")
+    }),
     savedEventsStore: createSavedEventsStore({ file: path.join(directory, "saved-events.json") })
   };
 }

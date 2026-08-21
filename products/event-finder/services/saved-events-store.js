@@ -19,6 +19,11 @@ function createSavedEventsStore({ file = DEFAULT_SAVED_EVENTS_FILE } = {}) {
       .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
   }
 
+  async function get(eventId, profileId = DEFAULT_PROFILE_ID) {
+    const events = await list(profileId);
+    return events.find((item) => item.event.id === eventId) ?? null;
+  }
+
   async function save(event, profileId = DEFAULT_PROFILE_ID) {
     const snapshot = createEvent(event);
     const entry = { savedAt: new Date().toISOString(), event: snapshot };
@@ -49,7 +54,7 @@ function createSavedEventsStore({ file = DEFAULT_SAVED_EVENTS_FILE } = {}) {
     return removed;
   }
 
-  return { list, remove, save };
+  return { get, list, remove, save };
 }
 
 module.exports = { DEFAULT_SAVED_EVENTS_FILE, createSavedEventsStore };

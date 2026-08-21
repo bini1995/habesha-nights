@@ -8,7 +8,9 @@ const { createNycParksAdapter } = require("./sources/nyc-parks");
 const { createPreferencesStore } = require("./services/preferences-store");
 const { createSavedEventsStore } = require("./services/saved-events-store");
 const { createQualityStore } = require("./services/quality-store");
+const { createQualityHistoryStore } = require("./services/quality-history-store");
 const { recommendEvents } = require("./domain/recommendations");
+const { createCalendar } = require("./domain/calendar");
 
 function createDefaultSourceRegistry() {
   const registry = createSourceRegistry();
@@ -29,7 +31,8 @@ function createEventFinderRouter({
   catalogStore = createCatalogStore(),
   preferencesStore = createPreferencesStore(),
   savedEventsStore = createSavedEventsStore(),
-  qualityStore = createQualityStore()
+  qualityStore = createQualityStore(),
+  qualityHistoryStore = createQualityHistoryStore()
 } = {}) {
   const router = express.Router();
 
@@ -74,12 +77,14 @@ function createEventFinderRouter({
         catalog,
         sourceStats: sourceRegistry.getSourceStats()
       });
+      const qualityHistoryEntry = await qualityHistoryStore.record(quality);
 
       response.json({
         updatedAt: catalog?.updatedAt ?? null,
         count: events.length,
         sources,
-        quality
+        quality,
+        qualityHistoryEntry
       });
     } catch (error) {
       console.error("Could not refresh NYC events:");
@@ -103,6 +108,31 @@ function createEventFinderRouter({
   router.get("/saved-events", async (request, response) => {
     const savedEvents = await savedEventsStore.list();
     response.json({ count: savedEvents.length, savedEvents });
+  });
+
+  function sendCalendar(response, events, filename) {
+    response
+      .type("text/calendar")
+      .attachment(filename)
+      .send(createCalendar(events));
+  }
+
+  router.get("/saved-events/calendar.ics", async (request, response) => {
+    try {
+      const savedEvents = await savedEventsStore.list();
+      sendCalendar(response, savedEvents.map((item) => item.event), "nyc-saved-events.ics");
+    } catch (error) {
+      response.status(404).json({ error: error.message });
+    }
+  });
+
+  router.get("/saved-events/:eventId/calendar.ics", async (request, response) => {
+    const savedEvent = await savedEventsStore.get(request.params.eventId);
+    if (!savedEvent) {
+      response.status(404).json({ error: "Saved event was not found." });
+      return;
+    }
+    sendCalendar(response, [savedEvent.event], "nyc-saved-event.ics");
   });
 
   router.post("/saved-events", async (request, response) => {
@@ -157,6 +187,15 @@ function createEventFinderRouter({
 
   router.get("/quality", async (request, response) => {
     response.json({ quality: await qualityStore.get() });
+  });
+
+  router.get("/quality/history", async (request, response) => {
+    try {
+      const entries = await qualityHistoryStore.list({ limit: request.query.limit ?? 30 });
+      response.json({ count: entries.length, retention: qualityHistoryStore.retention, entries });
+    } catch (error) {
+      response.status(400).json({ error: error.message });
+    }
   });
 
   return router;
