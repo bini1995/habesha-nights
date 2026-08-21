@@ -125,7 +125,14 @@ function createEvent(input) {
     venue: Object.freeze({
       name: requireText(input.venue?.name, "venue.name"),
       borough,
-      address: optionalText(input.venue?.address)
+      address: optionalText(input.venue?.address),
+      parkId: optionalText(input.venue?.parkId),
+      coordinates: input.venue?.coordinates
+        ? Object.freeze({
+          latitude: Number(input.venue.coordinates.latitude),
+          longitude: Number(input.venue.coordinates.longitude)
+        })
+        : null
     }),
     url: normalizeUrl(input.url),
     tags: Object.freeze(normalizeTags(input.tags))
