@@ -29,15 +29,27 @@
             <h1>Find your next day out.</h1>
             <p class="hero-copy">Explore free and public events across all five boroughs, sourced from the official NYC Parks calendar.</p>
           </div>
-          <button class="refresh-button" id="refresh-button" type="button">
-            <span aria-hidden="true">↻</span> Refresh events
-          </button>
+          <div class="hero-actions">
+            <button class="preferences-button" id="preferences-button" type="button">Preferences</button>
+            <button class="refresh-button" id="refresh-button" type="button">
+              <span aria-hidden="true">↻</span> Refresh events
+            </button>
+          </div>
         </div>
         <p class="updated-status" id="updated-status" aria-live="polite">Checking the catalog…</p>
+        <div class="quality-summary" id="quality-summary" aria-live="polite">
+          <span>Quality report loading…</span>
+        </div>
       </div>
     </header>
 
     <main>
+      <div class="view-tabs" role="tablist" aria-label="Event views">
+        <button id="browse-tab" role="tab" aria-selected="true" aria-controls="events" data-view="browse" type="button">Discover</button>
+        <button id="recommended-tab" role="tab" aria-selected="false" aria-controls="events" data-view="recommended" tabindex="-1" type="button">Recommended</button>
+        <button id="saved-tab" role="tab" aria-selected="false" aria-controls="events" data-view="saved" tabindex="-1" type="button">Saved <span class="saved-count" id="saved-count">0</span></button>
+      </div>
+
       <form class="filters" id="filter-form" role="search">
         <div class="field search-field">
           <label for="search">Search events</label>
@@ -106,6 +118,51 @@
         <div class="event-grid" id="event-grid"></div>
       </section>
     </main>
+
+    <dialog class="preferences-dialog" id="preferences-dialog" aria-labelledby="preferences-heading">
+      <form id="preferences-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow dark">Personalize recommendations</p>
+            <h2 id="preferences-heading">Your preferences</h2>
+          </div>
+          <button class="icon-button" id="close-preferences" type="button" aria-label="Close preferences">×</button>
+        </div>
+        <fieldset>
+          <legend>Favorite boroughs</legend>
+          <div class="choice-grid">
+            <label><input type="checkbox" name="preferredBoroughs" value="BRONX"> Bronx</label>
+            <label><input type="checkbox" name="preferredBoroughs" value="BROOKLYN"> Brooklyn</label>
+            <label><input type="checkbox" name="preferredBoroughs" value="MANHATTAN"> Manhattan</label>
+            <label><input type="checkbox" name="preferredBoroughs" value="QUEENS"> Queens</label>
+            <label><input type="checkbox" name="preferredBoroughs" value="STATEN_ISLAND"> Staten Island</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Favorite categories</legend>
+          <div class="choice-grid">
+            <label><input type="checkbox" name="preferredCategories" value="ARTS"> Arts</label>
+            <label><input type="checkbox" name="preferredCategories" value="COMMUNITY"> Community</label>
+            <label><input type="checkbox" name="preferredCategories" value="FAMILY"> Family</label>
+            <label><input type="checkbox" name="preferredCategories" value="FILM"> Film</label>
+            <label><input type="checkbox" name="preferredCategories" value="FOOD"> Food</label>
+            <label><input type="checkbox" name="preferredCategories" value="MUSIC"> Music</label>
+            <label><input type="checkbox" name="preferredCategories" value="SPORTS"> Sports & fitness</label>
+            <label><input type="checkbox" name="preferredCategories" value="THEATER"> Theater</label>
+          </div>
+        </fieldset>
+        <div class="field">
+          <label for="preference-keywords">Keywords <span>(comma separated, up to 10)</span></label>
+          <input id="preference-keywords" name="keywords" placeholder="jazz, birding, yoga">
+        </div>
+        <label class="toggle-choice"><input id="hide-past-events" name="hidePastEvents" type="checkbox"> Hide events that have already ended</label>
+        <p class="form-message" id="preferences-message" role="status"></p>
+        <div class="dialog-actions">
+          <button class="clear-button" id="cancel-preferences" type="button">Cancel</button>
+          <button class="save-preferences" type="submit">Save preferences</button>
+        </div>
+      </form>
+    </dialog>
 
     <footer>
       Event information comes from the official NYC Parks public events dataset. Always confirm details before heading out.

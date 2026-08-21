@@ -8,6 +8,9 @@ const BOROUGH_LABELS = Object.freeze({
 
 let catalogEvents = [];
 let searchTimer = null;
+let currentView = "browse";
+let savedEventIds = new Set();
+let preferences = null;
 
 function escapeHtml(value = "") {
   return String(value)
@@ -105,12 +108,25 @@ function currentFilters() {
 
 function renderEvents() {
   const filters = currentFilters();
-  const events = catalogEvents.filter((event) => matchesSearch(event, filters.search));
+  const events = currentView === "browse"
+    ? catalogEvents.filter((event) => matchesSearch(event, filters.search))
+    : catalogEvents;
   const grid = document.getElementById("event-grid");
   const empty = document.getElementById("empty-state");
   const count = document.getElementById("result-count");
 
   count.textContent = `${events.length} ${events.length === 1 ? "event" : "events"}`;
+  document.querySelector("#empty-state strong").textContent = {
+    browse: "No events match these filters.",
+    recommended: "No recommendations are available yet.",
+    saved: "You haven’t saved any events yet."
+  }[currentView];
+  document.querySelector("#empty-state span").textContent = {
+    browse: "Try another borough, category, date, or search term.",
+    recommended: "Update your preferences or refresh the event catalog.",
+    saved: "Discover an event and choose Save event to keep a snapshot here."
+  }[currentView];
+  document.getElementById("empty-clear-button").hidden = currentView !== "browse";
   empty.hidden = events.length !== 0;
   grid.hidden = events.length === 0;
 
@@ -127,6 +143,7 @@ function renderEvents() {
         <h3>${escapeHtml(event.title)}</h3>
         <p class="location">${escapeHtml(location)}</p>
         ${event.description ? `<p class="description">${escapeHtml(event.description)}</p>` : ""}
+        ${event.reasons?.length ? `<ul class="recommendation-reasons">${event.reasons.map((reason) => `<li>${escapeHtml(reason)}</li>`).join("")}</ul>` : ""}
         ${tags.length ? `<div class="tags">${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <details>
           <summary>Event details</summary>
@@ -135,13 +152,32 @@ function renderEvents() {
             <div><dt>Where</dt><dd>${escapeHtml(location)}${event.venue.address && event.venue.address !== event.venue.name ? `<br>${escapeHtml(event.venue.address)}` : ""}</dd></div>
           </dl>
         </details>
-        <a class="official-link" href="${escapeHtml(event.url)}" target="_blank" rel="noopener noreferrer">
-          View official listing <span aria-hidden="true">↗</span>
-          <span class="sr-only"> for ${escapeHtml(event.title)} (opens in a new tab)</span>
-        </a>
+        <div class="card-actions">
+          <a class="official-link" href="${escapeHtml(event.url)}" target="_blank" rel="noopener noreferrer">
+            Official listing <span aria-hidden="true">↗</span>
+            <span class="sr-only"> for ${escapeHtml(event.title)} (opens in a new tab)</span>
+          </a>
+          <button class="save-button ${savedEventIds.has(event.id) ? "saved" : ""}" type="button" data-event-id="${escapeHtml(event.id)}">
+            ${savedEventIds.has(event.id) ? "Remove saved" : "Save event"}
+          </button>
+        </div>
       </article>
     `;
   }).join("");
+}
+
+async function requestJson(url, options) {
+  const response = await fetch(url, options);
+  const data = response.status === 204 ? null : await response.json();
+  if (!response.ok) throw new Error(data?.error || "The request could not be completed.");
+  return data;
+}
+
+async function loadSavedIds() {
+  const data = await requestJson("/api/event-finder/saved-events");
+  savedEventIds = new Set(data.savedEvents.map((item) => item.event.id));
+  document.getElementById("saved-count").textContent = savedEventIds.size;
+  return data.savedEvents;
 }
 
 async function loadEvents() {
@@ -170,6 +206,127 @@ async function loadEvents() {
   }
 }
 
+async function loadRecommended() {
+  const data = await requestJson("/api/event-finder/recommendations?limit=100");
+  catalogEvents = data.recommendations.map((item) => ({
+    ...item.event,
+    reasons: item.reasons
+  }));
+  document.getElementById("updated-status").textContent = formatUpdated(data.updatedAt);
+  renderEvents();
+}
+
+async function loadSaved() {
+  const savedEvents = await loadSavedIds();
+  catalogEvents = savedEvents.map((item) => item.event);
+  renderEvents();
+}
+
+async function loadCurrentView() {
+  const loading = document.getElementById("loading-state");
+  const error = document.getElementById("error-state");
+  loading.hidden = false;
+  error.hidden = true;
+  try {
+    if (currentView === "recommended") await loadRecommended();
+    else if (currentView === "saved") await loadSaved();
+    else await loadEvents();
+  } catch (viewError) {
+    error.hidden = false;
+    document.getElementById("error-message").textContent = viewError.message;
+  } finally {
+    loading.hidden = true;
+  }
+}
+
+function switchView(view) {
+  currentView = view;
+  for (const tab of document.querySelectorAll("[role=tab]")) {
+    const selected = tab.dataset.view === view;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+  }
+  const filters = document.getElementById("filter-form");
+  filters.hidden = view !== "browse";
+  document.getElementById("results-heading").textContent = {
+    browse: "Upcoming events",
+    recommended: "Recommended for you",
+    saved: "Your saved events"
+  }[view];
+  loadCurrentView();
+}
+
+async function toggleSaved(eventId) {
+  if (savedEventIds.has(eventId)) {
+    await requestJson(`/api/event-finder/saved-events/${encodeURIComponent(eventId)}`, {
+      method: "DELETE"
+    });
+  } else {
+    await requestJson("/api/event-finder/saved-events", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ eventId })
+    });
+  }
+  await loadSavedIds();
+  if (currentView === "saved" || currentView === "recommended") await loadCurrentView();
+  else renderEvents();
+}
+
+async function loadPreferences() {
+  const data = await requestJson("/api/event-finder/preferences");
+  preferences = data.preferences;
+  const form = document.getElementById("preferences-form");
+  for (const input of form.querySelectorAll("input[type=checkbox]")) {
+    if (input.name === "preferredBoroughs") input.checked = preferences.preferredBoroughs.includes(input.value);
+    if (input.name === "preferredCategories") input.checked = preferences.preferredCategories.includes(input.value);
+  }
+  document.getElementById("preference-keywords").value = preferences.keywords.join(", ");
+  document.getElementById("hide-past-events").checked = preferences.hidePastEvents;
+}
+
+async function savePreferences(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const message = document.getElementById("preferences-message");
+  message.textContent = "";
+  const values = new FormData(form);
+  try {
+    const data = await requestJson("/api/event-finder/preferences", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        preferredBoroughs: values.getAll("preferredBoroughs"),
+        preferredCategories: values.getAll("preferredCategories"),
+        keywords: String(values.get("keywords") || "").split(",").map((item) => item.trim()).filter(Boolean),
+        hidePastEvents: values.get("hidePastEvents") === "on"
+      })
+    });
+    preferences = data.preferences;
+    document.getElementById("preferences-dialog").close();
+    if (currentView === "recommended") await loadCurrentView();
+  } catch (saveError) {
+    message.textContent = saveError.message;
+  }
+}
+
+async function loadQuality() {
+  const { quality } = await requestJson("/api/event-finder/quality");
+  const container = document.getElementById("quality-summary");
+  if (!quality.catalogUpdatedAt) {
+    container.innerHTML = "<span>No ingestion report yet</span>";
+    return;
+  }
+  const rejected = Object.values(quality.sources || {})
+    .reduce((total, source) => total + (source.rejected || 0), 0);
+  container.innerHTML = `
+    <span>${escapeHtml(quality.freshness.toLowerCase())} catalog</span>
+    <span>${quality.catalogEvents} normalized events</span>
+    <span>${rejected} incomplete source rows skipped</span>
+    <span>Coverage: ${Object.keys(quality.byBorough || {}).length}/5 boroughs</span>
+  `;
+}
+
 async function refreshCatalog() {
   const button = document.getElementById("refresh-button");
   button.disabled = true;
@@ -179,7 +336,8 @@ async function refreshCatalog() {
   try {
     const response = await fetch("/api/event-finder/refresh", { method: "POST" });
     if (!response.ok) throw new Error("The refresh could not be completed.");
-    await loadEvents();
+    await loadCurrentView();
+    await loadQuality();
   } catch (refreshError) {
     document.getElementById("loading-state").hidden = true;
     document.getElementById("error-state").hidden = false;
@@ -205,10 +363,48 @@ function initialize() {
     searchTimer = setTimeout(renderEvents, 150);
   });
   document.getElementById("refresh-button").addEventListener("click", refreshCatalog);
-  document.getElementById("retry-button").addEventListener("click", loadEvents);
+  document.getElementById("retry-button").addEventListener("click", loadCurrentView);
   document.getElementById("clear-button").addEventListener("click", clearFilters);
   document.getElementById("empty-clear-button").addEventListener("click", clearFilters);
-  loadEvents();
+  document.getElementById("event-grid").addEventListener("click", (event) => {
+    const button = event.target.closest(".save-button");
+    if (button) toggleSaved(button.dataset.eventId).catch((error) => {
+      document.getElementById("error-state").hidden = false;
+      document.getElementById("error-message").textContent = error.message;
+    });
+  });
+  for (const tab of document.querySelectorAll("[role=tab]")) {
+    tab.addEventListener("click", () => switchView(tab.dataset.view));
+    tab.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const tabs = [...document.querySelectorAll("[role=tab]")];
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const next = tabs[(tabs.indexOf(tab) + direction + tabs.length) % tabs.length];
+      switchView(next.dataset.view);
+      next.focus();
+    });
+  }
+  const dialog = document.getElementById("preferences-dialog");
+  document.getElementById("preferences-button").addEventListener("click", async () => {
+    try {
+      await loadPreferences();
+      dialog.showModal();
+    } catch (error) {
+      document.getElementById("error-state").hidden = false;
+      document.getElementById("error-message").textContent = error.message;
+    }
+  });
+  document.getElementById("close-preferences").addEventListener("click", () => dialog.close());
+  document.getElementById("cancel-preferences").addEventListener("click", () => dialog.close());
+  document.getElementById("preferences-form").addEventListener("submit", savePreferences);
+  Promise.all([loadSavedIds(), loadQuality()])
+    .then(loadEvents)
+    .catch((error) => {
+      document.getElementById("loading-state").hidden = true;
+      document.getElementById("error-state").hidden = false;
+      document.getElementById("error-message").textContent = error.message;
+    });
 }
 
 if (typeof document !== "undefined") {
@@ -221,6 +417,7 @@ if (typeof module !== "undefined") {
     escapeHtml,
     formatUpdated,
     matchesSearch,
-    nycMidnightIso
+    nycMidnightIso,
+    requestJson
   };
 }

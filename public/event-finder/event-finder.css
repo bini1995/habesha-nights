@@ -54,8 +54,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .refresh-button:hover { background: #c95525; }
 .refresh-button:disabled { cursor: wait; opacity: .7; }
 .refreshing span { display: inline-block; animation: spin 1s linear infinite; }
+.hero-actions { display: flex; gap: 10px; }
+.preferences-button { background: transparent; border: 1px solid #8db39e; color: #fff; padding: 12px 16px; }
+.preferences-button:hover { background: rgba(255,255,255,.1); }
+.quality-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: #d4e7dc; font-size: .78rem; }
+.quality-summary span { border: 1px solid rgba(212,231,220,.35); border-radius: 99px; padding: 5px 9px; }
 
 main { max-width: 1200px; margin: auto; padding: 0 24px 64px; }
+.view-tabs { display: flex; gap: 8px; padding: 20px 0 0; }
+.view-tabs button { background: transparent; color: var(--muted); padding: 10px 14px; }
+.view-tabs button[aria-selected="true"] { background: var(--green); color: #fff; }
+.saved-count { display: inline-grid; place-items: center; min-width: 20px; margin-left: 3px; border-radius: 99px; background: rgba(255,255,255,.2); padding: 2px 5px; font-size: .72rem; }
 .filters { position: relative; display: grid; grid-template-columns: 2fr repeat(3, minmax(145px, 1fr)) auto; align-items: end; gap: 14px; margin-top: -1px; padding: 22px; background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--orange); box-shadow: 0 14px 40px rgba(23, 32, 28, .08); }
 .field { display: grid; gap: 7px; }
 .field label { color: #3f4b45; font-size: .78rem; font-weight: 800; }
@@ -84,7 +93,33 @@ dt { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .
 dd { margin: 3px 0 0; font-size: .84rem; line-height: 1.45; }
 .official-link { align-self: flex-start; margin-top: auto; padding-top: 20px; color: var(--orange); font-size: .9rem; font-weight: 850; text-decoration: none; }
 .official-link:hover { text-decoration: underline; }
+.card-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 20px; }
+.card-actions .official-link { margin-top: 0; padding-top: 0; }
+.save-button { border: 1px solid #a9b8ae; background: #fff; color: var(--green); padding: 8px 11px; font-size: .82rem; }
+.save-button:hover { background: var(--green-light); }
+.save-button.saved { border-color: var(--green); background: var(--green); color: #fff; }
+.recommendation-reasons { display: grid; gap: 5px; margin: 14px 0 0; padding: 0; list-style: none; }
+.recommendation-reasons li { color: var(--green); font-size: .78rem; font-weight: 750; }
+.recommendation-reasons li::before { content: "✓"; margin-right: 6px; color: var(--orange); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+
+.preferences-dialog { width: min(680px, calc(100% - 32px)); max-height: calc(100vh - 32px); border: 0; border-radius: 18px; padding: 0; color: var(--ink); box-shadow: 0 30px 90px rgba(0,0,0,.3); }
+.preferences-dialog::backdrop { background: rgba(13,31,23,.68); }
+.preferences-dialog form { padding: 26px; }
+.dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.dialog-heading h2 { font-size: 2.2rem; }
+.icon-button { width: 40px; height: 40px; border-radius: 50%; background: #edf0ed; color: var(--ink); font-size: 1.5rem; }
+fieldset { margin: 24px 0 0; border: 0; border-top: 1px solid var(--line); padding: 18px 0 0; }
+legend { padding: 0 8px 0 0; font-weight: 800; }
+.choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.choice-grid label, .toggle-choice { display: flex; align-items: center; gap: 8px; color: #3f4b45; font-size: .9rem; }
+.choice-grid input, .toggle-choice input { width: 18px; height: 18px; accent-color: var(--green); }
+.preferences-dialog .field { margin-top: 22px; }
+.preferences-dialog .field span { color: var(--muted); font-weight: 400; }
+.toggle-choice { margin-top: 18px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.save-preferences { background: var(--green); color: #fff; padding: 11px 16px; }
+.form-message { min-height: 20px; margin: 14px 0 0; color: #a13d17; font-size: .85rem; }
 
 .state-panel { display: grid; justify-items: center; gap: 8px; border: 1px dashed #abb6ae; border-radius: 16px; padding: 54px 24px; color: var(--muted); text-align: center; }
 .state-panel strong { color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 1.5rem; }
@@ -107,10 +142,15 @@ footer { border-top: 1px solid var(--line); color: var(--muted); padding: 28px 2
   .nav-links { max-width: 100%; }
   .hero-inner { padding-top: 42px; }
   .refresh-button { width: 100%; }
+  .hero-actions { width: 100%; }
+  .hero-actions button { flex: 1; }
+  .view-tabs { overflow-x: auto; }
   .filters { grid-template-columns: 1fr; margin-inline: -8px; padding: 18px; }
   .search-field { grid-column: auto; }
   .event-grid { grid-template-columns: 1fr; }
   .event-meta { align-items: flex-start; flex-direction: column; }
+  .choice-grid { grid-template-columns: 1fr; }
+  .card-actions { align-items: flex-start; flex-direction: column; }
 }
 
 @media (prefers-reduced-motion: reduce) {

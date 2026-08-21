@@ -76,4 +76,22 @@ test("Event Finder page provides accessible loading and error announcements", ()
   assert.match(html, /id="loading-state" role="status"/);
   assert.match(html, /id="error-state" role="alert"/);
   assert.match(html, /id="event-grid"/);
+  assert.match(html, /role="tablist" aria-label="Event views"/);
+  assert.match(html, /id="recommended-tab"/);
+  assert.match(html, /id="saved-tab"/);
+  assert.match(html, /id="preferences-dialog" aria-labelledby="preferences-heading"/);
+  assert.match(html, /id="quality-summary" aria-live="polite"/);
+});
+
+test("Event Finder UI calls each Phase 2B API and renders recommendation reasons", () => {
+  const script = fs.readFileSync(
+    path.join(__dirname, "..", "public", "event-finder", "event-finder.js"),
+    "utf8"
+  );
+
+  assert.match(script, /\/api\/event-finder\/saved-events/);
+  assert.match(script, /\/api\/event-finder\/preferences/);
+  assert.match(script, /\/api\/event-finder\/recommendations/);
+  assert.match(script, /\/api\/event-finder\/quality/);
+  assert.match(script, /recommendation-reasons/);
 });
