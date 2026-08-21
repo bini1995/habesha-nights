@@ -21,6 +21,12 @@ const { createImportStore } = require("./services/import-store");
 const { createAnalysisStore } = require("./services/analysis-store");
 const { createImportService } = require("./services/import-service");
 const { createAnalysisService } = require("./services/analysis-service");
+const {
+  RosterImageConfigurationError,
+  RosterImageUpstreamError,
+  RosterImageValidationError,
+  createRosterImageParser
+} = require("./services/roster-image-parser");
 const { IMPORT_SCHEMA_VERSION } = require("./domain/import-schema");
 const footballSample = require("./fixtures/football-team.json");
 const basketballSample = require("./fixtures/basketball-team.json");
@@ -31,11 +37,26 @@ function createSportsHubRouter({
   entitlementService = createEntitlementService(),
   importStore = createImportStore(),
   analysisStore = createAnalysisStore(),
+  rosterImageParser = createRosterImageParser(),
   now = () => new Date()
 } = {}) {
   const router = express.Router();
   const importService = createImportService({ teamStore, importStore, now });
   const analysisService = createAnalysisService({ analysisStore, entitlementService, now });
+  const rosterImageRequests = new Map();
+
+  function allowRosterImageRequest(request) {
+    const key = request.ip || request.socket?.remoteAddress || "unknown";
+    const currentTime = now().getTime();
+    const recent = (rosterImageRequests.get(key) ?? [])
+      .filter((timestamp) => currentTime - timestamp < 60_000);
+
+    if (recent.length >= 5) return false;
+
+    recent.push(currentTime);
+    rosterImageRequests.set(key, recent);
+    return true;
+  }
 
   router.get("/", (request, response) => {
     response.json({
@@ -50,7 +71,8 @@ function createSportsHubRouter({
         "TEAM_ANALYZER",
         "LOCAL_TEAM_PERSISTENCE",
         "CSV_JSON_IMPORT",
-        "ANALYSIS_PROVENANCE"
+        "ANALYSIS_PROVENANCE",
+        "ROSTER_IMAGE_EXTRACTION"
       ]
     });
   });
@@ -92,6 +114,39 @@ function createSportsHubRouter({
     if (sport === "BASKETBALL") return response.json(basketballSample);
     if (sport === "SOCCER") return response.json(soccerSample);
     return response.status(404).json({ error: "Sample sport not found." });
+  });
+
+  router.get("/roster-images/status", (request, response) => {
+    response.json(rosterImageParser.status());
+  });
+
+  router.post("/roster-images/parse", async (request, response) => {
+    if (!allowRosterImageRequest(request)) {
+      return response.status(429).json({
+        error: "Too many roster scans. Wait a minute and try again."
+      });
+    }
+
+    try {
+      const result = await rosterImageParser.parse(request.body);
+      response.json(result);
+    } catch (error) {
+      if (error instanceof RosterImageValidationError) {
+        return response.status(400).json({ error: error.message });
+      }
+
+      if (error instanceof RosterImageConfigurationError) {
+        return response.status(503).json({ error: error.message });
+      }
+
+      if (error instanceof RosterImageUpstreamError) {
+        return response.status(502).json({ error: error.message });
+      }
+
+      response.status(500).json({
+        error: "Roster screenshot scanning failed."
+      });
+    }
   });
 
   router.get("/import/templates/:format", (request, response) => {

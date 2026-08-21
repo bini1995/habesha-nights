@@ -26,6 +26,10 @@ function createDashboardApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  app.use(
+    "/api/sports-hub/roster-images",
+    express.json({ limit: "9mb" })
+  );
   app.use(express.json());
   app.use("/api/test", testRouter);
 
