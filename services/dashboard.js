@@ -45,6 +45,11 @@ function createDashboardApp() {
     createSportsHubRouter()
   );
 
+  app.get("/", (request, response) => response.redirect(302, "/sports-hub/"));
+  app.get("/opportunity-agent/", (request, response) => {
+    response.sendFile(Path.join(__dirname, "..", "public", "index.html"));
+  });
+
   app.use(
     express.static(
       Path.join(__dirname, "..", "public")

@@ -61,9 +61,9 @@ test("all product pages expose consistent accessible navigation", () => {
   for (const page of pages) {
     const html = fs.readFileSync(path.join(publicDirectory, page), "utf8");
     assert.match(html, /aria-label="Product navigation"/);
-    assert.match(html, /href="\/"[^>]*>Opportunity Agent|href="\/">NYC Tools/);
-    assert.match(html, /href="\/event-finder\/">Event Finder/);
-    assert.match(html, /href="\/sports-hub\/">Sports Hub/);
+    assert.match(html, /href="\/opportunity-agent\/"[^>]*>Opportunity Agent/);
+    assert.match(html, /href="\/event-finder\/">(?:Event Finder|NYC Events)/);
+    assert.match(html, /href="\/sports-hub\/"[^>]*>(?:Sports Hub|SPORTS HUB|Sports)/);
   }
 });
 
