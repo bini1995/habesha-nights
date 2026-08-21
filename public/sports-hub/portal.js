@@ -5,10 +5,29 @@ const defaults = { FOOTBALL: ["QB","RB","WR","TE"], BASKETBALL: ["PG","SG","SF",
 const list = document.querySelector("#player-list"); let currentStep = 1; let sampleOptions = [];
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[character]);
 const slug = (value, fallback) => String(value || fallback).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60) || fallback;
-function playerCard(data={}) { const card=document.createElement("article"); card.className="player-card"; card.innerHTML=`<label>Player name<input class="p-name" required value="${escapeHtml(data.player?.name||"")}" placeholder="Player name"></label><label>Position<select class="p-position">${positions.map(p=>`<option ${p===data.player?.position?"selected":""}>${p}</option>`).join("")}</select></label><label>Lineup role<select class="p-role"><option value="STARTER" ${data.role!=="BENCH"?"selected":""}>Starting lineup</option><option value="BENCH" ${data.role==="BENCH"?"selected":""}>Bench</option></select></label><div class="player-actions" aria-label="Player actions"><button type="button" data-up aria-label="Move player up">↑</button><button type="button" data-down aria-label="Move player down">↓</button><button type="button" data-remove aria-label="Remove player">×</button></div><details><summary>Advanced projection and availability</summary><div><label>Projected points<input class="p-points" type="number" min="0" max="1000" step="0.1" value="${data.projection?.projectedFantasyPoints??""}"></label><label>Status<select class="p-status">${["ACTIVE","QUESTIONABLE","DOUBTFUL","OUT","UNKNOWN"].map(s=>`<option ${s===(data.player?.status||"ACTIVE")?"selected":""}>${s[0]+s.slice(1).toLowerCase()}</option>`).join("")}</select></label></div></details>`; card.querySelector("[data-remove]").onclick=()=>card.remove(); card.querySelector("[data-up]").onclick=()=>card.previousElementSibling&&list.insertBefore(card,card.previousElementSibling); card.querySelector("[data-down]").onclick=()=>card.nextElementSibling&&list.insertBefore(card.nextElementSibling,card); list.append(card); }
+function playerCard(data={}) {
+  const card=document.createElement("article");
+  const selectedPosition=positions.includes(data.player?.position)
+    ? data.player.position
+    : "";
+  const selectedRole=["STARTER","BENCH"].includes(data.role)
+    ? data.role
+    : "";
+  const extractionConfidence=Number(data.extractionConfidence);
+  const confidenceMessage=Number.isFinite(extractionConfidence)
+    ? `<p class="scan-confidence">Screenshot read: ${Math.round(extractionConfidence*100)}% confidence. Check this player.</p>`
+    : "";
+
+  card.className="player-card";
+  card.innerHTML=`<label>Player name<input class="p-name" required value="${escapeHtml(data.player?.name||"")}" placeholder="Player name"></label><label>Position<select class="p-position" required>${selectedPosition?"":'<option value="">Choose</option>'}${positions.map(p=>`<option value="${p}" ${p===selectedPosition?"selected":""}>${p}</option>`).join("")}</select></label><label>Lineup role<select class="p-role" required>${selectedRole?"":'<option value="">Choose starter or bench</option>'}<option value="STARTER" ${selectedRole==="STARTER"?"selected":""}>Starting lineup</option><option value="BENCH" ${selectedRole==="BENCH"?"selected":""}>Bench</option></select></label><div class="player-actions" aria-label="Player actions"><button type="button" data-up aria-label="Move player up">↑</button><button type="button" data-down aria-label="Move player down">↓</button><button type="button" data-remove aria-label="Remove player">×</button></div>${confidenceMessage}<details><summary>More details for a sharper score</summary><div><label>Projected points<input class="p-points" type="number" min="0" max="1000" step="0.1" value="${data.projection?.projectedFantasyPoints??""}"></label><label>Status<select class="p-status">${["ACTIVE","QUESTIONABLE","DOUBTFUL","OUT","UNKNOWN"].map(s=>`<option value="${s}" ${s===(data.player?.status||"ACTIVE")?"selected":""}>${s[0]+s.slice(1).toLowerCase()}</option>`).join("")}</select></label></div></details>`;
+  card.querySelector("[data-remove]").onclick=()=>card.remove();
+  card.querySelector("[data-up]").onclick=()=>card.previousElementSibling&&list.insertBefore(card,card.previousElementSibling);
+  card.querySelector("[data-down]").onclick=()=>card.nextElementSibling&&list.insertBefore(card.nextElementSibling,card);
+  list.append(card);
+}
 function setStepControlsEnabled(section, enabled) {
   section.querySelectorAll("input, select, textarea, button").forEach((control) => {
-    control.disabled = !enabled;
+    control.disabled = !enabled || control.dataset.alwaysDisabled === "true";
   });
 }
 function showStep(step){
@@ -52,6 +71,132 @@ function enhanceResults(result){
   const link=document.createElement("a");link.href=`/sports-hub/${sport.toLowerCase()}/`;link.className="quiet analyze-again";link.textContent="Analyze another team";document.querySelector(".share").append(link);
 }
 function downloadCard(t,a,strong){const c=document.createElement("canvas");c.width=1200;c.height=630;const x=c.getContext("2d");x.fillStyle="#07100f";x.fillRect(0,0,c.width,c.height);x.fillStyle=getComputedStyle(document.body).getPropertyValue("--sport");x.fillRect(70,70,14,490);x.fillStyle="#f7f7f2";x.font="bold 34px sans-serif";x.fillText(`SPORTS HUB · ${sport}`,120,145);x.font="bold 62px sans-serif";x.fillText(t.name,120,260);x.font="bold 110px sans-serif";x.fillText(`${a.overallScore}/100`,120,405);x.font="32px sans-serif";x.fillText(`Grade ${a.letterGrade} · Strongest: ${componentLabel(strong[0])}`,120,480);const link=document.createElement("a");link.download="sports-hub-team-score.png";link.href=c.toDataURL("image/png");link.click();}
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(new Error("That image could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+function scanMarkup() {
+  return `<section class="roster-scan" id="roster-scan" aria-labelledby="scan-title"><div class="scan-copy"><p class="kicker">Fastest option</p><h3 id="scan-title">Use a roster screenshot</h3><p>Upload a screenshot or clear photo. We’ll pull out the visible players, then you review every name before anything is saved.</p></div><button class="scan-picker" id="scan-picker" type="button">Choose screenshot</button><input id="scan-file" type="file" accept="image/png,image/jpeg,image/webp" hidden><div class="scan-review" id="scan-review" hidden><img id="scan-preview" alt="Selected roster screenshot preview"><div><strong id="scan-filename"></strong><label class="scan-consent"><input id="scan-consent" type="checkbox"> I agree to send this image to OpenAI to read the roster. Sports Hub will not save the image.</label><button class="primary" id="scan-submit" type="button">Scan my roster</button></div></div><p class="scan-status" id="scan-status" role="status" aria-live="polite"></p></section>`;
+}
+function extractionProjection(player) {
+  if (!Number.isFinite(player.projectedFantasyPoints)) return null;
+  return {
+    playerId: slug(player.name,"screenshot-player"),
+    projectedFantasyPoints: player.projectedFantasyPoints,
+    source: "VISIBLE_SCREENSHOT_TEXT"
+  };
+}
+function applyRosterExtraction(extraction) {
+  if (extraction.teamName) {
+    document.querySelector("#team-name").value=extraction.teamName;
+  }
+  if (extraction.leagueName) {
+    document.querySelector("#league-name").value=extraction.leagueName;
+  }
+  list.replaceChildren();
+  extraction.players.forEach((player)=>playerCard({
+    extractionConfidence:player.confidence,
+    player:{
+      name:player.name,
+      position:player.position,
+      status:player.status
+    },
+    projection:extractionProjection(player),
+    role:player.role
+  }));
+  sampleOptions=[];
+  showStep(2);
+  document.querySelector(".scan-result-note")?.remove();
+  const message=document.createElement("div");
+  message.className="scan-result-note";
+  const warnings=extraction.warnings.length
+    ? `<ul>${extraction.warnings.map(warning=>`<li>${escapeHtml(warning)}</li>`).join("")}</ul>`
+    : "";
+  message.innerHTML=`<strong>We found ${extraction.players.length} player${extraction.players.length===1?"":"s"}.</strong><p>Check every name, position, and starter/bench choice before continuing. Blank projections will stay blank.</p>${warnings}`;
+  document.querySelector(".step[data-step=\"2\"] h2").after(message);
+}
+async function installRosterScanner() {
+  const formGrid=document.querySelector(".step[data-step=\"1\"] .form-grid");
+  formGrid.insertAdjacentHTML("afterend",scanMarkup());
+  const picker=document.querySelector("#scan-picker");
+  const input=document.querySelector("#scan-file");
+  const review=document.querySelector("#scan-review");
+  const preview=document.querySelector("#scan-preview");
+  const filename=document.querySelector("#scan-filename");
+  const consent=document.querySelector("#scan-consent");
+  const submit=document.querySelector("#scan-submit");
+  const status=document.querySelector("#scan-status");
+  let selectedDataUrl=null;
+  let configuration;
+
+  try {
+    const response=await fetch("/api/sports-hub/roster-images/status");
+    configuration=await response.json();
+    if(!response.ok||!configuration.enabled){
+      picker.dataset.alwaysDisabled="true";
+      picker.disabled=true;
+      status.textContent="Screenshot scanning is not available on this build yet. You can still add players below.";
+      return;
+    }
+  } catch {
+    picker.dataset.alwaysDisabled="true";
+    picker.disabled=true;
+    status.textContent="Screenshot scanning is temporarily unavailable. You can still add players below.";
+    return;
+  }
+
+  picker.onclick=()=>input.click();
+  input.onchange=async()=>{
+    const file=input.files?.[0];
+    status.textContent="";
+    selectedDataUrl=null;
+    review.hidden=true;
+    consent.checked=false;
+    if(!file)return;
+    if(!configuration.supportedTypes.includes(file.type)){
+      status.textContent="Choose a PNG, JPEG, or WebP screenshot.";
+      return;
+    }
+    if(file.size>configuration.maxBytes){
+      status.textContent="Choose an image that is 6 MB or smaller.";
+      return;
+    }
+    try{
+      selectedDataUrl=await readImageFile(file);
+      preview.src=selectedDataUrl;
+      filename.textContent=file.name||"Roster screenshot";
+      review.hidden=false;
+      consent.focus({preventScroll:true});
+    }catch(error){status.textContent=error.message;}
+  };
+  submit.onclick=async()=>{
+    if(!selectedDataUrl){status.textContent="Choose a roster screenshot first.";return;}
+    if(!consent.checked){status.textContent="Confirm the image-processing disclosure to continue.";consent.focus();return;}
+    submit.disabled=true;
+    picker.disabled=true;
+    status.textContent="Reading the visible roster…";
+    try{
+      const response=await fetch("/api/sports-hub/roster-images/parse",{
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({consent:true,imageDataUrl:selectedDataUrl,sport})
+      });
+      const body=await response.json();
+      if(!response.ok)throw new Error(body.error||"The roster screenshot could not be read.");
+      if(!body.extraction.players.length)throw new Error(body.extraction.warnings[0]||"No readable players were found.");
+      applyRosterExtraction(body.extraction);
+      selectedDataUrl=null;
+      preview.removeAttribute("src");
+      input.value="";
+      status.textContent="Roster read. Review every player before continuing.";
+    }catch(error){status.textContent=error.message;}
+    finally{submit.disabled=false;picker.disabled=false;}
+  };
+}
 async function analyze(teamData,options=[]){const saved=await fetch("/api/sports-hub/teams",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(teamData)});const body=await saved.json();if(!saved.ok)throw new Error(body.error||"Team could not be saved.");const response=await fetch(`/api/sports-hub/teams/${encodeURIComponent(body.team.id)}/analyze`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({availablePlayers:options})});const result=await response.json();if(!response.ok)throw new Error(result.error||"Analysis failed.");document.querySelector(".builder").hidden=true;document.querySelector(".progress").hidden=true;document.querySelector(".portal-hero").hidden=true;render(result,body.team);enhanceResults(result);}
 async function loadDemo(run=false){const response=await fetch(`/api/sports-hub/samples/${sport.toLowerCase()}`);const data=await response.json();document.querySelector("#team-name").value=data.name;document.querySelector("#league-name").value=data.leagueSettings.name;list.replaceChildren();data.roster.forEach(playerCard);sampleOptions=data.availablePlayers||[];showStep(3);if(run)await analyze({...data,id:`${data.id}-${Date.now()}`},sampleOptions);}
 document.querySelectorAll("[data-next]").forEach(button=>button.onclick=()=>{if(validateActiveStep())showStep(currentStep+1);});document.querySelectorAll("[data-back]").forEach(button=>button.onclick=()=>showStep(currentStep-1));document.querySelector("#add-player").onclick=()=>playerCard({role:"BENCH"});document.querySelector("#builder-form").onsubmit=async(event)=>{event.preventDefault();const error=document.querySelector("#builder-error");error.textContent="";try{await analyze(team(),sampleOptions);sessionStorage.removeItem(`sports-hub-draft-${sport}`);}catch(e){error.textContent=e.message;}};
@@ -59,5 +204,8 @@ const draftKey=`sports-hub-draft-${sport}`;
 let draft=null;try{draft=JSON.parse(sessionStorage.getItem(draftKey));}catch{}
 if(draft?.roster?.length){document.querySelector("#team-name").value=draft.name||"";document.querySelector("#league-name").value=draft.leagueName||"";draft.roster.forEach(playerCard);}else{defaults.forEach((position)=>playerCard({role:"STARTER",player:{position,status:"ACTIVE"}}));}
 document.querySelector("#builder-form").addEventListener("input",()=>{sessionStorage.setItem(draftKey,JSON.stringify({name:document.querySelector("#team-name").value,leagueName:document.querySelector("#league-name").value,roster:roster()}));});showStep(1);
+installRosterScanner().catch(()=>{
+  document.querySelector("#step-error").textContent="Screenshot scanning could not load. You can still add players manually.";
+});
 if(new URLSearchParams(location.search).get("demo")==="1")loadDemo(true).catch(error=>document.querySelector("#builder-error").textContent=error.message);
 if(typeof module!=="undefined")module.exports={escapeHtml,componentLabel};
