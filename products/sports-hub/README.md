@@ -50,3 +50,38 @@ reasons. Recommendations are deterministic comparisons against supplied bench
 or available-player projections. The server returns at most two complete
 recommendations for `FREE`; `PREMIUM` can return all. Free responses expose
 only the count of additional locked recommendations, never their details.
+
+## Phase 3B imports and provenance
+
+Sports Hub accepts user-provided CSV, JSON, and bundled offline samples using
+the versioned `sports-hub-import/1.0` schema. It does not scrape or connect to
+ESPN, Yahoo, Sleeper, or another platform. The provider adapter boundary is
+reserved for a future integration with confirmed commercial-use permission.
+
+The schema covers sport, season, scoring period, projection date, team,
+manager, league settings, scoring rules, roster slots, player projections,
+waiver options, and optional availability status. Downloadable CSV and JSON
+examples are available from the Team Analyzer.
+
+Import endpoints under `/api/sports-hub`:
+
+- `POST /imports/preview` validates `{ sourceType, sport, content, filename? }`
+  without persistence. Preview IDs expire after 30 minutes.
+- `POST /imports/confirm` requires `{ previewId, operation }`, where operation
+  is explicitly `CREATE` or `UPDATE`.
+- `GET /imports` lists metadata without embedded snapshots.
+- `GET /imports/:importId` returns metadata and the normalized snapshot.
+- `POST /teams/:teamId/reanalyze` reproduces analysis from `{ importId }`.
+- `GET /import/templates/csv` and `/json` download example files.
+
+Confirmed teams remain in `logs/sports-hub/teams.json`. Import metadata and
+normalized snapshots are separately stored in `imports.json`; immutable
+analysis inputs are stored in `analyses.json` with 500-record retention. These
+ignored files persist through the Docker logs volume. Raw uploads and pasted
+content are never retained. Only a SHA-256 checksum, normalized data, counts,
+warnings, optional filename, and freshness metadata are stored.
+
+Every imported analysis includes source, projection date, scoring period,
+analysis version, import version, content and snapshot checksums,
+completeness/confidence, and a warning when projections are over seven days
+old. The FREE/PREMIUM response boundary remains unchanged.

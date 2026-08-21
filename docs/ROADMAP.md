@@ -49,7 +49,14 @@
   football-first interface.
 - [x] Add persistence, validation, scoring, entitlement, API, and browser-asset
   compatibility tests.
-- Add one licensed or user-provided data adapter behind an interface.
+- [x] Add versioned user-provided CSV, JSON, and offline-sample imports behind
+  preview and explicit confirmation stages.
+- [x] Persist separate import metadata, checksums, normalized import snapshots,
+  freshness, and immutable analysis input snapshots.
+- [x] Add import history/details, snapshot reanalysis, downloadable templates,
+  and an accessible import wizard.
+- Add one licensed live provider adapter only after commercial-use permission
+  is confirmed.
 - [x] Build read-only roster analysis and lineup recommendations first.
 - Add mini-league creation, membership, schedules, and deterministic scoring.
 - Keep AI advice explainable and require confirmation for roster changes.
@@ -64,7 +71,7 @@
 
 ## Immediate next slice
 
-Extend Sports Hub with saved analysis history and a CSV import adapter while
-keeping provider connections offline. Continue Opportunity Agent stabilization
+Extend Sports Hub with saved analysis comparison and import-field mapping while
+keeping live provider connections offline. Continue Opportunity Agent stabilization
 with scheduler, comparison, event, snapshot, and notification compatibility
 coverage.
