@@ -19,10 +19,13 @@
 
 ## Phase 2 — NYC Event Finder MVP
 
-- Define a normalized event model and source-adapter contract.
-- Start with one permitted data source and recorded fixtures.
-- Add deduplication, date/location/category filters, and saved preferences.
-- Expose a separate API namespace and dashboard area.
+- [x] Define a normalized event model and source-adapter contract.
+- [x] Start with the official NYC Parks source and recorded fixtures.
+- [x] Add persistent deduplication and date, borough, and category filters.
+- [x] Expose a separate API namespace and responsive dashboard area.
+- [x] Add catalog search, event details, official links, refresh controls, and
+  accessible loading, empty, and error states.
+- [ ] Add saved preferences.
 - Add recommendations only after ingestion quality is measurable.
 
 ## Phase 3 — Sports & Fantasy Hub MVP
@@ -44,7 +47,6 @@
 
 ## Immediate next slice
 
-Add unit coverage around watch CRUD validation without mutating the real
-`config/watches.json`, then add API compatibility tests. After that, define
-the Event Finder's normalized event schema and fixtures as the first new
-product code.
+Measure NYC Parks ingestion quality and add saved Event Finder preferences.
+In parallel, add unit coverage around watch CRUD validation without mutating
+the real `config/watches.json`, then add API compatibility tests.
