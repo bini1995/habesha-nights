@@ -1,41 +1,9 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI Sports & Fantasy Hub</title>
-    <link rel="stylesheet" href="/styles.css">
-  </head>
-  <body>
-    <nav class="product-nav" aria-label="Product navigation">
-      <div class="product-nav-inner">
-        <a class="product-brand" href="/">NYC Tools</a>
-        <div class="product-links">
-          <a href="/">Opportunity Agent</a>
-          <a href="/event-finder/">Event Finder</a>
-          <a aria-current="page" href="/sports-hub/">Sports Hub</a>
-        </div>
-      </div>
-    </nav>
-    <header>
-      <div>
-        <h1>AI Sports & Fantasy Hub</h1>
-        <div class="subtitle">Deterministic scoring and mini-league tools for football and basketball.</div>
-      </div>
-    </header>
-    <main>
-      <div class="grid">
-        <section class="card">
-          <div class="label">Current stage</div>
-          <div class="value">Foundation</div>
-          <p class="details">Core sport models and versioned scoring rules are ready for the next product slice.</p>
-        </section>
-        <section class="card">
-          <div class="label">Supported sports</div>
-          <div class="value">Football · Basketball</div>
-          <p class="details">Fantasy analysis will remain separate from Opportunity Agent monitoring and Event Finder discovery.</p>
-        </section>
-      </div>
-    </main>
-  </body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Team Analyzer · Sports Hub</title><link rel="stylesheet" href="/sports-hub/sports-hub.css"></head>
+<body><nav class="product-nav" aria-label="Product navigation"><div class="nav-inner"><a class="brand" href="/">NYC Tools</a><div class="nav-links"><a href="/">Opportunity Agent</a><a href="/event-finder/">Event Finder</a><a aria-current="page" href="/sports-hub/">Sports Hub</a></div></div></nav>
+<header class="hero"><div class="hero-inner"><div><p class="eyebrow">Sports Hub · Team Analyzer</p><h1>Know your roster.<br><span>Find the next move.</span></h1><p class="hero-copy">A deterministic, explainable team check for fantasy football and basketball. No account or sports-data subscription required.</p></div><div class="score-key" aria-label="Score explanation"><strong>Team Score</strong><span>0–100 roster quality</span><small>Separate from official fantasy points, future Manager Score, and future AI rankings.</small></div></div></header>
+<main><section class="workspace" aria-labelledby="build-title"><div class="section-heading"><div><p class="eyebrow">Build your analysis</p><h2 id="build-title">Enter a roster</h2></div><div class="sample-actions" aria-label="Offline sample teams"><button type="button" class="quiet" data-sample="football">Load football sample</button><button type="button" class="quiet" data-sample="basketball">Load basketball sample</button></div></div><div id="notice" class="notice" role="status" aria-live="polite"></div>
+<form id="team-form"><div class="settings-grid"><label>Sport<select id="sport" required><option value="FOOTBALL">Football</option><option value="BASKETBALL">Basketball</option></select></label><label>Team name<input id="team-name" required maxlength="120" value="My Fantasy Team"></label><label>League name<input id="league-name" required maxlength="120" value="My League"></label><label>Starter positions<input id="starter-positions" required value="QB,RB,WR,TE" aria-describedby="positions-help"><small id="positions-help">Comma-separated, such as QB,RB,WR,TE.</small></label></div>
+<div class="roster-heading"><div><h3>Roster</h3><p>Add players, roles, projections, and optional availability.</p></div><button id="add-player" class="quiet" type="button">+ Add player</button></div><div class="roster-table-wrap"><table><thead><tr><th>Player</th><th>Position</th><th>Role</th><th>Projected points</th><th>Availability</th><th><span class="sr-only">Remove</span></th></tr></thead><tbody id="roster-rows"></tbody></table></div>
+<details class="json-panel"><summary>Or paste validated team JSON</summary><label for="team-json">Team JSON</label><textarea id="team-json" rows="8" spellcheck="false" placeholder="Paste a complete team object here…"></textarea><button id="apply-json" type="button" class="quiet">Apply JSON</button></details><div class="submit-row"><p>Teams save to the default local profile.</p><button class="primary" type="submit">Analyze my team</button></div></form></section>
+<section id="results" class="results" aria-labelledby="results-title" hidden><div class="section-heading"><div><p class="eyebrow">Versioned analysis</p><h2 id="results-title">Your Team Score</h2></div><span id="confidence" class="confidence"></span></div><div class="score-layout"><div class="score-card"><span id="grade" class="grade">—</span><strong id="overall-score">—</strong><small>out of 100</small><p id="score-version"></p></div><div id="components" class="components"></div></div><div id="reasons" class="reasons"></div><div class="recommendation-heading"><div><p class="eyebrow">Highest-impact moves</p><h2>Recommendations</h2></div><span class="free-badge">2 free recommendations</span></div><div id="recommendations" class="recommendations"></div><div id="premium-placeholder" class="premium-placeholder" hidden><strong>More moves are available</strong><p>Premium access will unlock every ranked recommendation. Payments are not enabled yet.</p></div></section></main>
+<footer>Team Score is deterministic guidance—not an official league result or automatic roster action.</footer><script src="/sports-hub/sports-hub.js"></script></body></html>

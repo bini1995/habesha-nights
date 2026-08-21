@@ -21,3 +21,21 @@ test("Event Finder interface assets are served with browser-safe content types",
     assert.match(await response.text(), marker, route);
   }
 });
+
+test("Sports Hub interface assets are served with browser-safe content types", async (context) => {
+  const server = createDashboardApp().listen(0, "127.0.0.1");
+  context.after(() => new Promise((resolve) => server.close(resolve)));
+  await new Promise((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const expectations = [
+    ["/sports-hub/", /^text\/html/, /Team Analyzer/],
+    ["/sports-hub/sports-hub.css", /^text\/css/, /\.score-layout/],
+    ["/sports-hub/sports-hub.js", /^(text|application)\/javascript/, /lockedRecommendationCount/]
+  ];
+  for (const [route, contentType, marker] of expectations) {
+    const response = await fetch(`${base}${route}`);
+    assert.equal(response.status, 200, route);
+    assert.match(response.headers.get("content-type"), contentType, route);
+    assert.match(await response.text(), marker, route);
+  }
+});
