@@ -6,7 +6,8 @@ const PLAYER_STATUSES = Object.freeze(["ACTIVE", "QUESTIONABLE", "DOUBTFUL", "OU
 
 const POSITIONS = Object.freeze({
   FOOTBALL: Object.freeze(["QB", "RB", "WR", "TE", "K", "DST", "FLEX"]),
-  BASKETBALL: Object.freeze(["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"])
+  BASKETBALL: Object.freeze(["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"]),
+  SOCCER: Object.freeze(["GK", "DEF", "MID", "FWD"])
 });
 
 function deepFreeze(value) {

@@ -6,6 +6,7 @@ const path = require("node:path");
 const express = require("express");
 const football = require("../products/sports-hub/fixtures/football-team.json");
 const basketball = require("../products/sports-hub/fixtures/basketball-team.json");
+const soccer = require("../products/sports-hub/fixtures/soccer-team.json");
 const { createTeam } = require("../products/sports-hub/domain/models");
 const { TEAM_SCORE_VERSION, analyzeTeam, recommendImprovements } = require("../products/sports-hub/domain/team-analysis");
 const { createTeamStore } = require("../products/sports-hub/services/team-store");
@@ -24,8 +25,8 @@ async function withServer(router, run) {
   try { await run(`http://127.0.0.1:${server.address().port}/api/sports-hub`); } finally { await new Promise((resolve) => server.close(resolve)); }
 }
 
-test("football and basketball teams are validated and deeply immutable", () => {
-  for (const fixture of [football, basketball]) {
+test("football, basketball, and soccer teams are validated and deeply immutable", () => {
+  for (const fixture of [football, basketball, soccer]) {
     const team = createTeam(fixture);
     assert.equal(team.sport, fixture.sport);
     assert.equal(Object.isFrozen(team), true);
@@ -52,6 +53,10 @@ test("Team Score is deterministic, versioned, bounded, and distinct from other s
   const basketballResult = analyzeTeam(basketball);
   assert.equal(basketballResult.sport, "BASKETBALL");
   assert.ok(basketballResult.overallScore >= 0 && basketballResult.overallScore <= 100);
+  const soccerResult = analyzeTeam(soccer);
+  assert.equal(soccerResult.sport, "SOCCER");
+  assert.ok(soccerResult.overallScore >= 0 && soccerResult.overallScore <= 100);
+  assert.equal(soccerResult.officialFantasyPoints.label, "User-supplied projected points");
 });
 
 test("missing projections reduce completeness without breaking analysis", () => {

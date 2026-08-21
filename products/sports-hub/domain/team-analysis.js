@@ -1,7 +1,9 @@
 const { createAvailablePlayer, createTeam, deepFreeze } = require("./models");
 
 const TEAM_SCORE_VERSION = "1.0.0";
-const BASELINE_PROJECTION = Object.freeze({ FOOTBALL: 20, BASKETBALL: 40 });
+// These baselines normalize user-supplied projections into a roster-quality score.
+// They are not official scoring systems for any sport.
+const BASELINE_PROJECTION = Object.freeze({ FOOTBALL: 20, BASKETBALL: 40, SOCCER: 12 });
 const WEIGHTS = Object.freeze({ starterStrength: 0.3, benchDepth: 0.15, positionalBalance: 0.2, projectedProduction: 0.25, availabilityRisk: 0.1 });
 
 function clamp(value) { return Math.max(0, Math.min(100, value)); }

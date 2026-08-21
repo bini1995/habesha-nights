@@ -24,7 +24,10 @@ const DEFAULT_RULES = Object.freeze({
     steals: 3,
     blocks: 3,
     turnovers: -1
-  })
+  }),
+  // Soccer leagues vary widely. Team Analyzer uses supplied projected fantasy
+  // points and deliberately does not claim a universal official scoring model.
+  SOCCER: Object.freeze({})
 });
 
 function validateNumber(value, field) {

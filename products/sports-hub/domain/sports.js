@@ -1,6 +1,7 @@
 const SPORTS = Object.freeze([
   "FOOTBALL",
-  "BASKETBALL"
+  "BASKETBALL",
+  "SOCCER"
 ]);
 
 function normalizeSport(value) {

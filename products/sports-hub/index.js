@@ -24,6 +24,7 @@ const { createAnalysisService } = require("./services/analysis-service");
 const { IMPORT_SCHEMA_VERSION } = require("./domain/import-schema");
 const footballSample = require("./fixtures/football-team.json");
 const basketballSample = require("./fixtures/basketball-team.json");
+const soccerSample = require("./fixtures/soccer-team.json");
 
 function createSportsHubRouter({
   teamStore = createTeamStore(),
@@ -89,6 +90,7 @@ function createSportsHubRouter({
     const sport = String(request.params.sport).toUpperCase();
     if (sport === "FOOTBALL") return response.json(footballSample);
     if (sport === "BASKETBALL") return response.json(basketballSample);
+    if (sport === "SOCCER") return response.json(soccerSample);
     return response.status(404).json({ error: "Sample sport not found." });
   });
 
