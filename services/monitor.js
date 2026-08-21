@@ -3,8 +3,8 @@ const {
 } = require("./watch-service");
 
 const {
-  getWatcher
-} = require("../watchers");
+  getProvider
+} = require("./providers");
 
 const {
   compareShowtimes
@@ -77,7 +77,7 @@ async function runSingleWatch(watch) {
   let watcher;
 
   try {
-    watcher = getWatcher(
+    watcher = getProvider(
       watch.provider
     );
 

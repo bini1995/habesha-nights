@@ -2,7 +2,7 @@ const express = require("express");
 
 const {
   getSupportedProviders
-} = require("../watchers");
+} = require("../services/providers");
 
 const router = express.Router();
 
