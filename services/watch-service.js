@@ -1,138 +1,108 @@
 const fs = require("fs");
 const path = require("path");
+const { getProvider } = require("./providers");
 
-const WATCHES_FILE = path.join(
-  __dirname,
-  "..",
-  "config",
-  "watches.json"
-);
+const DEFAULT_WATCHES_FILE = path.join(__dirname, "..", "config", "watches.json");
 
-function readWatches() {
-  const raw = fs.readFileSync(
-    WATCHES_FILE,
-    "utf8"
-  );
-
-  const watches = JSON.parse(raw);
-
-  if (!Array.isArray(watches)) {
-    throw new Error(
-      "config/watches.json must contain an array."
-    );
+function createWatchService({ watchesFile = DEFAULT_WATCHES_FILE } = {}) {
+  function readWatches() {
+    const watches = JSON.parse(fs.readFileSync(watchesFile, "utf8"));
+    if (!Array.isArray(watches)) throw new Error("Watches file must contain an array.");
+    return watches;
   }
 
-  return watches;
-}
-
-function writeWatches(watches) {
-  fs.writeFileSync(
-    WATCHES_FILE,
-    JSON.stringify(watches, null, 2) + "\n",
-    "utf8"
-  );
-}
-
-function getAllWatches() {
-  return readWatches();
-}
-
-function getEnabledWatches() {
-  return readWatches().filter((watch) => {
-    return watch.enabled !== false;
-  });
-}
-
-function createWatch(watch) {
-  const watches = readWatches();
-
-  if (!watch || typeof watch !== "object") {
-    throw new Error("Watch data is required.");
+  function writeWatches(watches) {
+    fs.writeFileSync(watchesFile, `${JSON.stringify(watches, null, 2)}\n`, "utf8");
   }
 
-  if (!watch.id || typeof watch.id !== "string") {
-    throw new Error("Watch id is required.");
+  function getAllWatches() {
+    return readWatches();
   }
 
-  if (
-    watches.some(
-      (existingWatch) => existingWatch.id === watch.id
-    )
-  ) {
-    throw new Error(
-      `A watch with id "${watch.id}" already exists.`
-    );
+  function getEnabledWatches() {
+    return readWatches().filter((watch) => watch.enabled !== false);
   }
 
-  if (!watch.provider) {
-    throw new Error("Provider is required.");
+  function validateNewWatch(watch) {
+    if (!watch || typeof watch !== "object" || Array.isArray(watch)) {
+      throw new Error("Watch data is required.");
+    }
+    if (typeof watch.id !== "string" || !watch.id.trim()) {
+      throw new Error("Watch id is required.");
+    }
+    const id = watch.id.trim();
+    if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(id)) {
+      throw new Error("Watch id must use 1-80 letters, numbers, hyphens, or underscores.");
+    }
+    if (typeof watch.provider !== "string" || !watch.provider.trim()) {
+      throw new Error("Provider is required.");
+    }
+    getProvider(watch.provider);
+    if (typeof watch.pageUrl !== "string" || !watch.pageUrl.trim()) {
+      throw new Error("Page URL is required.");
+    }
+    let url;
+    try {
+      url = new URL(watch.pageUrl);
+    } catch {
+      throw new Error("Page URL must be a valid http or https URL.");
+    }
+    if (!["http:", "https:"].includes(url.protocol)) {
+      throw new Error("Page URL must be a valid http or https URL.");
+    }
+    return {
+      ...watch,
+      id,
+      provider: watch.provider.trim().toUpperCase(),
+      pageUrl: url.toString(),
+      enabled: watch.enabled !== false
+    };
   }
 
-  if (!watch.pageUrl) {
-    throw new Error("Page URL is required.");
+  function createWatch(watch) {
+    const watches = readWatches();
+    const newWatch = validateNewWatch(watch);
+    if (watches.some((existingWatch) => existingWatch.id === newWatch.id)) {
+      throw new Error(`A watch with id "${newWatch.id}" already exists.`);
+    }
+    watches.push(newWatch);
+    writeWatches(watches);
+    return newWatch;
   }
 
-  const newWatch = {
-    ...watch,
-    enabled: watch.enabled !== false
+  function deleteWatch(id) {
+    const watches = readWatches();
+    const watchIndex = watches.findIndex((watch) => watch.id === id);
+    if (watchIndex === -1) throw new Error(`No watch found with id "${id}".`);
+    const [deletedWatch] = watches.splice(watchIndex, 1);
+    writeWatches(watches);
+    return deletedWatch;
+  }
+
+  function setWatchEnabled(id, enabled) {
+    const watches = readWatches();
+    const watch = watches.find((existingWatch) => existingWatch.id === id);
+    if (!watch) throw new Error(`No watch found with id "${id}".`);
+    if (typeof enabled !== "boolean") throw new Error("Enabled must be true or false.");
+    watch.enabled = enabled;
+    writeWatches(watches);
+    return watch;
+  }
+
+  return {
+    createWatch,
+    deleteWatch,
+    getAllWatches,
+    getEnabledWatches,
+    setWatchEnabled,
+    validateNewWatch
   };
-
-  watches.push(newWatch);
-  writeWatches(watches);
-
-  return newWatch;
 }
 
-function deleteWatch(id) {
-  const watches = readWatches();
-
-  const watchIndex = watches.findIndex(
-    (watch) => watch.id === id
-  );
-
-  if (watchIndex === -1) {
-    throw new Error(
-      `No watch found with id "${id}".`
-    );
-  }
-
-  const [deletedWatch] =
-    watches.splice(watchIndex, 1);
-
-  writeWatches(watches);
-
-  return deletedWatch;
-}
-
-function setWatchEnabled(id, enabled) {
-  const watches = readWatches();
-
-  const watch = watches.find(
-    (existingWatch) => existingWatch.id === id
-  );
-
-  if (!watch) {
-    throw new Error(
-      `No watch found with id "${id}".`
-    );
-  }
-
-  if (typeof enabled !== "boolean") {
-    throw new Error(
-      "Enabled must be true or false."
-    );
-  }
-
-  watch.enabled = enabled;
-  writeWatches(watches);
-
-  return watch;
-}
+const defaultService = createWatchService();
 
 module.exports = {
-  getAllWatches,
-  getEnabledWatches,
-  createWatch,
-  deleteWatch,
-  setWatchEnabled
+  DEFAULT_WATCHES_FILE,
+  createWatchService,
+  ...defaultService
 };

@@ -1,81 +1,50 @@
 const express = require("express");
+const defaultWatchService = require("../services/watch-service");
 
-const {
-  getAllWatches,
-  createWatch,
-  deleteWatch,
-  setWatchEnabled
-} = require("../services/watch-service");
+function createWatchesRouter({ watchService = defaultWatchService } = {}) {
+  const router = express.Router();
 
-const router = express.Router();
+  router.get("/", (request, response) => {
+    try {
+      response.json({ watches: watchService.getAllWatches() });
+    } catch (error) {
+      console.error("Could not load watches:");
+      console.error(error);
+      response.status(500).json({ error: "Could not load watches." });
+    }
+  });
 
-router.get("/", (request, response) => {
-  try {
-    response.json({
-      watches: getAllWatches()
-    });
-  } catch (error) {
-    console.error("Could not load watches:");
-    console.error(error);
+  router.post("/", (request, response) => {
+    try {
+      response.status(201).json({ watch: watchService.createWatch(request.body) });
+    } catch (error) {
+      response.status(400).json({ error: error.message });
+    }
+  });
 
-    response.status(500).json({
-      error: "Could not load watches."
-    });
-  }
-});
+  router.patch("/:id/enabled", (request, response) => {
+    try {
+      response.json({
+        watch: watchService.setWatchEnabled(request.params.id, request.body.enabled)
+      });
+    } catch (error) {
+      response.status(error.message.startsWith("No watch found") ? 404 : 400)
+        .json({ error: error.message });
+    }
+  });
 
-router.post("/", (request, response) => {
-  try {
-    const watch = createWatch(
-      request.body
-    );
+  router.delete("/:id", (request, response) => {
+    try {
+      response.json({ watch: watchService.deleteWatch(request.params.id) });
+    } catch (error) {
+      response.status(404).json({ error: error.message });
+    }
+  });
 
-    response.status(201).json({
-      watch
-    });
-  } catch (error) {
-    response.status(400).json({
-      error: error.message
-    });
-  }
-});
+  return router;
+}
 
-router.patch("/:id/enabled", (request, response) => {
-  try {
-    const watch = setWatchEnabled(
-      request.params.id,
-      request.body.enabled
-    );
-
-    response.json({
-      watch
-    });
-  } catch (error) {
-    const status =
-      error.message.startsWith("No watch found")
-        ? 404
-        : 400;
-
-    response.status(status).json({
-      error: error.message
-    });
-  }
-});
-
-router.delete("/:id", (request, response) => {
-  try {
-    const deletedWatch = deleteWatch(
-      request.params.id
-    );
-
-    response.json({
-      watch: deletedWatch
-    });
-  } catch (error) {
-    response.status(404).json({
-      error: error.message
-    });
-  }
-});
+const router = createWatchesRouter();
+router.createWatchesRouter = createWatchesRouter;
 
 module.exports = router;

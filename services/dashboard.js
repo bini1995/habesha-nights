@@ -22,9 +22,7 @@ const {
   setWatchEnabled
 } = require("./watch-service");
 
-function createDashboardServer({
-  port = 3000
-} = {}) {
+function createDashboardApp() {
   const app = express();
 
   app.disable("x-powered-by");
@@ -52,6 +50,14 @@ function createDashboardServer({
       Path.join(__dirname, "..", "public")
     )
   );
+
+  return app;
+}
+
+function createDashboardServer({
+  port = 3000
+} = {}) {
+  const app = createDashboardApp();
 
   const server = app.listen(port, () => {
     console.log(
@@ -81,5 +87,6 @@ function createDashboardServer({
 }
 
 module.exports = {
+  createDashboardApp,
   createDashboardServer
 };
