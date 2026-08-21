@@ -97,6 +97,18 @@ function formatUpdated(value) {
   }).format(new Date(value))}`;
 }
 
+function summarizeQualityHistory(entries) {
+  if (!entries.length) return "No refresh trend recorded yet.";
+  if (entries.length === 1) {
+    return `Trend started: ${entries[0].normalizedCount} normalized events across ${entries[0].boroughCoverage}/5 boroughs.`;
+  }
+  const newest = entries[0];
+  const oldest = entries.at(-1);
+  const change = newest.normalizedCount - oldest.normalizedCount;
+  const direction = change === 0 ? "stable" : change > 0 ? `up ${change}` : `down ${Math.abs(change)}`;
+  return `Last ${entries.length} refreshes: normalized event count ${direction}; latest rejected ${newest.rejectedCount}, duplicates ${newest.duplicateCount}.`;
+}
+
 function currentFilters() {
   return {
     search: document.getElementById("search").value,
@@ -114,6 +126,7 @@ function renderEvents() {
   const grid = document.getElementById("event-grid");
   const empty = document.getElementById("empty-state");
   const count = document.getElementById("result-count");
+  document.getElementById("calendar-all-link").hidden = currentView !== "saved" || events.length === 0;
 
   count.textContent = `${events.length} ${events.length === 1 ? "event" : "events"}`;
   document.querySelector("#empty-state strong").textContent = {
@@ -160,6 +173,11 @@ function renderEvents() {
           <button class="save-button ${savedEventIds.has(event.id) ? "saved" : ""}" type="button" data-event-id="${escapeHtml(event.id)}">
             ${savedEventIds.has(event.id) ? "Remove saved" : "Save event"}
           </button>
+          ${currentView === "saved" ? `
+            <a class="calendar-link" href="/api/event-finder/saved-events/${encodeURIComponent(event.id)}/calendar.ics">
+              Add to calendar (.ics)<span class="sr-only"> for ${escapeHtml(event.title)}</span>
+            </a>
+          ` : ""}
         </div>
       </article>
     `;
@@ -327,6 +345,11 @@ async function loadQuality() {
   `;
 }
 
+async function loadQualityHistory() {
+  const data = await requestJson("/api/event-finder/quality/history?limit=12");
+  document.getElementById("quality-trend").textContent = summarizeQualityHistory(data.entries);
+}
+
 async function refreshCatalog() {
   const button = document.getElementById("refresh-button");
   button.disabled = true;
@@ -337,7 +360,7 @@ async function refreshCatalog() {
     const response = await fetch("/api/event-finder/refresh", { method: "POST" });
     if (!response.ok) throw new Error("The refresh could not be completed.");
     await loadCurrentView();
-    await loadQuality();
+    await Promise.all([loadQuality(), loadQualityHistory()]);
   } catch (refreshError) {
     document.getElementById("loading-state").hidden = true;
     document.getElementById("error-state").hidden = false;
@@ -398,7 +421,7 @@ function initialize() {
   document.getElementById("close-preferences").addEventListener("click", () => dialog.close());
   document.getElementById("cancel-preferences").addEventListener("click", () => dialog.close());
   document.getElementById("preferences-form").addEventListener("submit", savePreferences);
-  Promise.all([loadSavedIds(), loadQuality()])
+  Promise.all([loadSavedIds(), loadQuality(), loadQualityHistory()])
     .then(loadEvents)
     .catch((error) => {
       document.getElementById("loading-state").hidden = true;
@@ -418,6 +441,7 @@ if (typeof module !== "undefined") {
     formatUpdated,
     matchesSearch,
     nycMidnightIso,
-    requestJson
+    requestJson,
+    summarizeQualityHistory
   };
 }

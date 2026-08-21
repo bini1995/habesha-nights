@@ -7,7 +7,8 @@ const {
   buildCatalogQuery,
   escapeHtml,
   matchesSearch,
-  nycMidnightIso
+  nycMidnightIso,
+  summarizeQualityHistory
 } = require("../public/event-finder/event-finder");
 
 const fixture = require("./fixtures/nyc-parks-events.json");
@@ -94,4 +95,12 @@ test("Event Finder UI calls each Phase 2B API and renders recommendation reasons
   assert.match(script, /\/api\/event-finder\/recommendations/);
   assert.match(script, /\/api\/event-finder\/quality/);
   assert.match(script, /recommendation-reasons/);
+});
+
+test("Event Finder summarizes quality history in plain language", () => {
+  assert.equal(summarizeQualityHistory([]), "No refresh trend recorded yet.");
+  assert.match(summarizeQualityHistory([
+    { normalizedCount: 120, boroughCoverage: 5, rejectedCount: 2, duplicateCount: 1 },
+    { normalizedCount: 100, boroughCoverage: 5, rejectedCount: 3, duplicateCount: 0 }
+  ]), /normalized event count up 20; latest rejected 2, duplicates 1/);
 });

@@ -40,6 +40,7 @@
         <div class="quality-summary" id="quality-summary" aria-live="polite">
           <span>Quality report loading…</span>
         </div>
+        <p class="quality-trend" id="quality-trend" aria-live="polite">Quality trend loading…</p>
       </div>
     </header>
 
@@ -94,7 +95,12 @@
             <p class="eyebrow dark">What’s happening</p>
             <h2 id="results-heading">Upcoming events</h2>
           </div>
-          <p id="result-count" aria-live="polite"></p>
+          <div class="results-tools">
+            <p id="result-count" aria-live="polite"></p>
+            <a class="calendar-all-link" id="calendar-all-link" href="/api/event-finder/saved-events/calendar.ics" hidden>
+              Export all saved (.ics)
+            </a>
+          </div>
         </div>
 
         <div class="state-panel loading-state" id="loading-state" role="status">
