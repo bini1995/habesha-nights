@@ -33,6 +33,15 @@ function createSourceRegistry() {
     return [...sources.keys()];
   }
 
+  function getSourceStats() {
+    return Object.fromEntries([...sources].map(([name, adapter]) => [
+      name,
+      typeof adapter.getLastFetchStats === "function"
+        ? adapter.getLastFetchStats()
+        : null
+    ]));
+  }
+
   async function collect(filters = {}) {
     const events = [];
 
@@ -61,6 +70,7 @@ function createSourceRegistry() {
   return {
     register,
     getSourceNames,
+    getSourceStats,
     collect
   };
 }

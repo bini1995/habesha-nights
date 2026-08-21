@@ -81,7 +81,12 @@ function createCatalogStore({ catalogFile = DEFAULT_CATALOG_FILE } = {}) {
     return { updatedAt: catalog.updatedAt, events };
   }
 
-  return { load, query, replaceSource };
+  async function getById(eventId) {
+    const catalog = await load();
+    return catalog.events.find((event) => event.id === eventId) ?? null;
+  }
+
+  return { getById, load, query, replaceSource };
 }
 
 module.exports = { DEFAULT_CATALOG_FILE, createCatalogStore };

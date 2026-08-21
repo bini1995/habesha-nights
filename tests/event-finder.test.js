@@ -23,6 +23,9 @@ const {
   createCatalogStore
 } = require("../products/event-finder/services/catalog-store");
 const {
+  createQualityStore
+} = require("../products/event-finder/services/quality-store");
+const {
   createEventFinderRouter
 } = require("../products/event-finder");
 
@@ -206,6 +209,9 @@ test("refresh and filtered read endpoints use the persisted catalog", async (con
   const app = express();
   app.use("/api/event-finder", createEventFinderRouter({
     catalogStore,
+    qualityStore: createQualityStore({
+      file: path.join(directory, "quality.json")
+    }),
     sourceRegistry
   }));
   const server = app.listen(0);

@@ -154,7 +154,13 @@ function createNycParksAdapter({
     throw new Error("A fetch implementation is required.");
   }
 
+  let lastFetchStats = null;
+
   return {
+    getLastFetchStats() {
+      return lastFetchStats;
+    },
+
     async fetchEvents() {
       const response = await fetchImpl(datasetUrl, {
         headers: { accept: "application/json" }
@@ -170,14 +176,22 @@ function createNycParksAdapter({
       }
 
       const events = [];
+      let rejected = 0;
 
       for (const row of rows) {
         try {
           events.push(normalizeParksEvent(row));
         } catch (error) {
+          rejected += 1;
           onInvalidRow({ row, error });
         }
       }
+
+      lastFetchStats = {
+        received: rows.length,
+        accepted: events.length,
+        rejected
+      };
 
       return events;
     }
