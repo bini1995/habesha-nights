@@ -37,10 +37,20 @@
 
 ## Phase 3 — Sports & Fantasy Hub MVP
 
-- Define sport-neutral league, team, roster, player, matchup, and transaction
-  models with football and basketball extensions.
+- [x] Define validated, immutable sport-neutral player, team, roster-slot,
+  league-settings, projection, analysis, and recommendation models for
+  football and basketball.
+- [x] Add default-profile atomic team persistence and manual/JSON roster input.
+- [x] Add deterministic Team Score v1.0.0 with component scores, confidence,
+  explanations, and ranked replacement recommendations.
+- [x] Enforce FREE/PREMIUM recommendation entitlements on the server without
+  payment integration or premium-detail leakage.
+- [x] Add Team Analyzer APIs, offline sport fixtures, and a responsive
+  football-first interface.
+- [x] Add persistence, validation, scoring, entitlement, API, and browser-asset
+  compatibility tests.
 - Add one licensed or user-provided data adapter behind an interface.
-- Build read-only roster analysis and lineup recommendations first.
+- [x] Build read-only roster analysis and lineup recommendations first.
 - Add mini-league creation, membership, schedules, and deterministic scoring.
 - Keep AI advice explainable and require confirmation for roster changes.
 
@@ -54,6 +64,7 @@
 
 ## Immediate next slice
 
-Add saved-event calendar reminders and ingestion-quality alert thresholds.
-Continue Opportunity Agent stabilization with scheduler, comparison, event,
-snapshot, and notification compatibility coverage.
+Extend Sports Hub with saved analysis history and a CSV import adapter while
+keeping provider connections offline. Continue Opportunity Agent stabilization
+with scheduler, comparison, event, snapshot, and notification compatibility
+coverage.
