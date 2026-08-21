@@ -3,6 +3,11 @@ const { getScoringRules } = require("./scoring");
 
 const ROSTER_ROLES = Object.freeze(["STARTER", "BENCH"]);
 const PLAYER_STATUSES = Object.freeze(["ACTIVE", "QUESTIONABLE", "DOUBTFUL", "OUT", "UNKNOWN"]);
+const PLAYER_IDENTITY_METHODS = Object.freeze([
+  "EXACT_NAME",
+  "ALIAS",
+  "USER_CONFIRMED"
+]);
 
 const POSITIONS = Object.freeze({
   FOOTBALL: Object.freeze(["QB", "RB", "WR", "TE", "K", "DST", "FLEX"]),
@@ -42,6 +47,24 @@ function requireId(value, field) {
   return id;
 }
 
+function requireExternalId(value, field) {
+  const id = requireText(value, field, 160);
+  if (!/^[a-zA-Z0-9._:-]+$/.test(id)) {
+    throw new Error(
+      `${field} may contain only letters, numbers, dots, colons, hyphens, and underscores.`
+    );
+  }
+  return id;
+}
+
+function requireIsoDate(value, field) {
+  const date = requireText(value, field, 40);
+  if (Number.isNaN(Date.parse(date))) {
+    throw new Error(`${field} must be a valid ISO date.`);
+  }
+  return new Date(date).toISOString();
+}
+
 function optionalNumber(value, field, { minimum = -Infinity, maximum = Infinity } = {}) {
   if (value === undefined || value === null || value === "") return null;
   const number = Number(value);
@@ -49,6 +72,42 @@ function optionalNumber(value, field, { minimum = -Infinity, maximum = Infinity 
     throw new Error(`${field} must be between ${minimum} and ${maximum}.`);
   }
   return number;
+}
+
+function createPlayerIdentity(input, playerId, field = "player.identity") {
+  if (input === undefined || input === null) return null;
+  requireObject(input, field);
+  const canonicalPlayerId = requireId(
+    input.canonicalPlayerId,
+    `${field}.canonicalPlayerId`
+  );
+  if (canonicalPlayerId !== playerId) {
+    throw new Error(`${field}.canonicalPlayerId must match the player ID.`);
+  }
+  const matchMethod = requireText(
+    input.matchMethod,
+    `${field}.matchMethod`,
+    40
+  ).toUpperCase();
+  if (!PLAYER_IDENTITY_METHODS.includes(matchMethod)) {
+    throw new Error(
+      `${field}.matchMethod must be one of: ${PLAYER_IDENTITY_METHODS.join(", ")}.`
+    );
+  }
+
+  return deepFreeze({
+    canonicalPlayerId,
+    matchMethod,
+    matchedAt: requireIsoDate(input.matchedAt, `${field}.matchedAt`),
+    providerId: requireExternalId(input.providerId, `${field}.providerId`),
+    providerPlayerId: requireExternalId(
+      input.providerPlayerId,
+      `${field}.providerPlayerId`
+    ),
+    sourceUpdatedAt: input.sourceUpdatedAt
+      ? requireIsoDate(input.sourceUpdatedAt, `${field}.sourceUpdatedAt`)
+      : null
+  });
 }
 
 function createPlayer(input, sport, field = "player") {
@@ -62,8 +121,10 @@ function createPlayer(input, sport, field = "player") {
   if (!PLAYER_STATUSES.includes(status)) {
     throw new Error(`${field}.status must be one of: ${PLAYER_STATUSES.join(", ")}.`);
   }
+  const id = requireId(input.id, `${field}.id`);
   return deepFreeze({
-    id: requireId(input.id, `${field}.id`),
+    id,
+    identity: createPlayerIdentity(input.identity, id, `${field}.identity`),
     name: requireText(input.name, `${field}.name`),
     sport: normalizedSport,
     position,
@@ -153,12 +214,14 @@ function createAvailablePlayer(input, sport, index = 0) {
 }
 
 module.exports = {
+  PLAYER_IDENTITY_METHODS,
   PLAYER_STATUSES,
   POSITIONS,
   ROSTER_ROLES,
   createAvailablePlayer,
   createLeagueSettings,
   createPlayer,
+  createPlayerIdentity,
   createPlayerProjection,
   createRosterSlot,
   createTeam,

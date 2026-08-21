@@ -22,6 +22,9 @@ const { createAnalysisStore } = require("./services/analysis-store");
 const { createImportService } = require("./services/import-service");
 const { createAnalysisService } = require("./services/analysis-service");
 const {
+  createPlayerIdentityService
+} = require("./services/player-identity-service");
+const {
   RosterImageConfigurationError,
   RosterImageUpstreamError,
   RosterImageValidationError,
@@ -38,6 +41,7 @@ function createSportsHubRouter({
   importStore = createImportStore(),
   analysisStore = createAnalysisStore(),
   rosterImageParser = createRosterImageParser(),
+  playerIdentityService = createPlayerIdentityService(),
   now = () => new Date()
 } = {}) {
   const router = express.Router();
@@ -72,7 +76,9 @@ function createSportsHubRouter({
         "LOCAL_TEAM_PERSISTENCE",
         "CSV_JSON_IMPORT",
         "ANALYSIS_PROVENANCE",
-        "ROSTER_IMAGE_EXTRACTION"
+        "ROSTER_IMAGE_EXTRACTION",
+        "PLAYER_IDENTITY_RESOLUTION",
+        "LIVE_PLAYER_DATA_PROVIDER_BOUNDARY"
       ]
     });
   });
@@ -118,6 +124,20 @@ function createSportsHubRouter({
 
   router.get("/roster-images/status", (request, response) => {
     response.json(rosterImageParser.status());
+  });
+
+  router.get("/player-identities/status", (request, response) => {
+    response.json(playerIdentityService.status());
+  });
+
+  router.post("/player-identities/resolve", async (request, response) => {
+    try {
+      response.json(await playerIdentityService.resolveRoster(request.body));
+    } catch (error) {
+      response.status(400).json({
+        error: error.message
+      });
+    }
   });
 
   router.post("/roster-images/parse", async (request, response) => {

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "sports-hub-player-directory/1.0",
+  "provider": {
+    "id": "offline-sample",
+    "name": "Sports Hub fictional sample directory",
+    "mode": "OFFLINE_SAMPLE",
+    "live": false,
+    "updatedAt": "2026-08-21T00:00:00.000Z",
+    "capabilities": ["PLAYER_DIRECTORY"]
+  },
+  "players": [
+    { "id": "f-qb-a", "providerPlayerId": "f-qb-a", "sport": "FOOTBALL", "name": "Alex Carter", "aliases": ["A. Carter"], "position": "QB", "teamLabel": "Brooklyn Sample" },
+    { "id": "f-rb-a", "providerPlayerId": "f-rb-a", "sport": "FOOTBALL", "name": "Marcus Reed", "aliases": ["M. Reed"], "position": "RB", "teamLabel": "Brooklyn Sample" },
+    { "id": "f-wr-a", "providerPlayerId": "f-wr-a", "sport": "FOOTBALL", "name": "Jordan Miles", "aliases": ["J. Miles"], "position": "WR", "teamLabel": "Brooklyn Sample" },
+    { "id": "f-te-a", "providerPlayerId": "f-te-a", "sport": "FOOTBALL", "name": "Noah Grant", "aliases": [], "position": "TE", "teamLabel": "Brooklyn Sample" },
+    { "id": "f-amb-qb", "providerPlayerId": "f-amb-qb", "sport": "FOOTBALL", "name": "Casey Morgan", "aliases": [], "position": "QB", "teamLabel": "Queens Sample" },
+    { "id": "f-amb-rb", "providerPlayerId": "f-amb-rb", "sport": "FOOTBALL", "name": "Casey Morgan", "aliases": [], "position": "RB", "teamLabel": "Bronx Sample" },
+
+    { "id": "b-pg-a", "providerPlayerId": "b-pg-a", "sport": "BASKETBALL", "name": "Chris Lane", "aliases": ["C. Lane"], "position": "PG", "teamLabel": "Queens Sample" },
+    { "id": "b-sg-a", "providerPlayerId": "b-sg-a", "sport": "BASKETBALL", "name": "Devon Cole", "aliases": [], "position": "SG", "teamLabel": "Queens Sample" },
+    { "id": "b-sf-a", "providerPlayerId": "b-sf-a", "sport": "BASKETBALL", "name": "Milan Ross", "aliases": [], "position": "SF", "teamLabel": "Queens Sample" },
+    { "id": "b-c-a", "providerPlayerId": "b-c-a", "sport": "BASKETBALL", "name": "Jalen Hart", "aliases": [], "position": "C", "teamLabel": "Queens Sample" },
+    { "id": "b-amb-pg", "providerPlayerId": "b-amb-pg", "sport": "BASKETBALL", "name": "Jordan Lee", "aliases": [], "position": "PG", "teamLabel": "Manhattan Sample" },
+    { "id": "b-amb-c", "providerPlayerId": "b-amb-c", "sport": "BASKETBALL", "name": "Jordan Lee", "aliases": [], "position": "C", "teamLabel": "Staten Island Sample" },
+
+    { "id": "s-gk-a", "providerPlayerId": "s-gk-a", "sport": "SOCCER", "name": "Maya Santos", "aliases": ["M. Santos"], "position": "GK", "teamLabel": "Queens Sample" },
+    { "id": "s-def-a", "providerPlayerId": "s-def-a", "sport": "SOCCER", "name": "Theo Clarke", "aliases": [], "position": "DEF", "teamLabel": "Queens Sample" },
+    { "id": "s-mid-a", "providerPlayerId": "s-mid-a", "sport": "SOCCER", "name": "Nia Okafor", "aliases": [], "position": "MID", "teamLabel": "Queens Sample" },
+    { "id": "s-fwd-a", "providerPlayerId": "s-fwd-a", "sport": "SOCCER", "name": "Leo Martín", "aliases": ["Leo Martin"], "position": "FWD", "teamLabel": "Queens Sample" },
+    { "id": "s-amb-mid", "providerPlayerId": "s-amb-mid", "sport": "SOCCER", "name": "Alex Silva", "aliases": [], "position": "MID", "teamLabel": "Brooklyn Sample" },
+    { "id": "s-amb-fwd", "providerPlayerId": "s-amb-fwd", "sport": "SOCCER", "name": "Alex Silva", "aliases": [], "position": "FWD", "teamLabel": "Bronx Sample" }
+  ]
+}
