@@ -11,6 +11,9 @@ const { initialize } = require("./websocket");
 const {
   createEventFinderRouter
 } = require("../products/event-finder");
+const {
+  createSportsHubRouter
+} = require("../products/sports-hub");
 
 const {
   getAllWatches,
@@ -38,6 +41,10 @@ function createDashboardServer({
   app.use(
     "/api/event-finder",
     createEventFinderRouter()
+  );
+  app.use(
+    "/api/sports-hub",
+    createSportsHubRouter()
   );
 
   app.use(
