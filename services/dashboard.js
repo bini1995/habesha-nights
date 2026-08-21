@@ -36,16 +36,20 @@ function createDashboardApp() {
   app.use("/api/providers", providersRouter);
   app.use("/api/events", eventsRouter);
   app.use("/api/watches", watchesRouter);
-  app.use(
-    "/api/event-finder",
-    createEventFinderRouter()
-  );
+  if (process.env.EVENT_FINDER_ENABLED !== "false") {
+    app.use(
+      "/api/event-finder",
+      createEventFinderRouter()
+    );
+  }
   app.use(
     "/api/sports-hub",
     createSportsHubRouter()
   );
 
-  app.get("/", (request, response) => response.redirect(302, "/sports-hub/"));
+  app.get("/", (request, response) => {
+    response.sendFile(Path.join(__dirname, "..", "public", "sports-hub", "index.html"));
+  });
   app.get("/opportunity-agent/", (request, response) => {
     response.sendFile(Path.join(__dirname, "..", "public", "index.html"));
   });

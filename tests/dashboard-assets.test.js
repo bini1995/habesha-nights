@@ -28,7 +28,8 @@ test("Sports Hub interface assets are served with browser-safe content types", a
   await new Promise((resolve) => server.once("listening", resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   const expectations = [
-    ["/sports-hub/", /^text\/html/, /Where do you play/],
+    ["/", /^text\/html/, /Sports Hub · Your lineup/],
+    ["/sports-hub/", /^text\/html/, /What do you play/],
     ["/sports-hub/football/", /^text\/html/, /Step 1 of 3/],
     ["/sports-hub/basketball/", /^text\/html/, /Fantasy Basketball/],
     ["/sports-hub/soccer/", /^text\/html/, /Fantasy Soccer/],
