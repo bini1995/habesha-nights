@@ -35,6 +35,8 @@ Each concern has a separate atomic store under `logs/event-finder/`:
   leaves the rolling catalog.
 - `quality.json` stores the latest ingestion counts, rejected rows,
   deduplication, borough/category coverage, event range, and freshness data.
+- `quality-history.json` stores the latest 90 successful refresh summaries so
+  quality trends remain bounded and inspectable.
 
 API routes:
 
@@ -43,6 +45,9 @@ API routes:
 - `DELETE /api/event-finder/saved-events/:eventId`
 - `GET /api/event-finder/recommendations`
 - `GET /api/event-finder/quality`
+- `GET /api/event-finder/quality/history` (optional `limit`, up to 90)
+- `GET /api/event-finder/saved-events/:eventId/calendar.ics`
+- `GET /api/event-finder/saved-events/calendar.ics`
 
 Recommendations are deterministic and keyless. Category matches score 30,
 borough matches score 20, and each keyword match scores 10. Results are then
@@ -50,3 +55,9 @@ ordered by score and start time, exclude saved events, optionally exclude past
 events, and always include plain-language match reasons. When no preference
 matches, the next upcoming events remain discoverable with an upcoming-soon
 reason.
+
+Saved-event calendar downloads use RFC 5545 CRLF line endings, escaping and
+line folding. They include an `America/New_York` timezone definition and emit
+local start/end values from the saved snapshot, including events that end the
+following morning. Both individual and combined downloads are generated from
+saved snapshots, not the rolling catalog.

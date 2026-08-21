@@ -30,7 +30,10 @@
 - [x] Report ingestion quality, coverage, rejected rows, deduplication, and
   catalog freshness.
 - [x] Add Discover, Recommended, and Saved dashboard views plus preferences.
-- [ ] Add ingestion history and measurable source-quality trends.
+- [x] Add bounded ingestion history and measurable source-quality trends.
+- [x] Add standards-compliant individual and combined saved-event calendar
+  exports with New York timezone semantics.
+- [x] Add HTTP asset smoke tests and isolated watch CRUD/API coverage.
 
 ## Phase 3 — Sports & Fantasy Hub MVP
 
@@ -51,6 +54,6 @@
 
 ## Immediate next slice
 
-Record ingestion-quality history and add saved-event calendar export. In
-parallel, add unit coverage around watch CRUD validation without mutating the
-real `config/watches.json`, then add API compatibility tests.
+Add saved-event calendar reminders and ingestion-quality alert thresholds.
+Continue Opportunity Agent stabilization with scheduler, comparison, event,
+snapshot, and notification compatibility coverage.
