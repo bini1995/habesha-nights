@@ -66,8 +66,8 @@ function createCatalogStore({ catalogFile = DEFAULT_CATALOG_FILE } = {}) {
     const category = filters.category?.replace(/[ -]+/g, "_").toUpperCase();
     const limit = filters.limit === undefined ? 250 : Number(filters.limit);
 
-    if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
-      throw new Error("limit must be an integer from 1 to 1000.");
+    if (!Number.isInteger(limit) || limit < 1 || limit > 5000) {
+      throw new Error("limit must be an integer from 1 to 5000.");
     }
 
     const events = catalog.events.filter((event) => {
