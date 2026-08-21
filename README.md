@@ -1,119 +1,99 @@
 # NYC Opportunity Agent
 
-A configurable monitoring agent that watches websites for changes and sends real-time alerts when opportunities become available.
-
-Originally built to monitor AMC IMAX 70MM movie ticket releases, the system evolved into a general-purpose opportunity monitoring framework.
+A configurable monitoring agent that watches websites for changes and sends
+real-time alerts when opportunities become available. It was originally built
+for AMC IMAX 70MM ticket releases and now provides a general monitoring
+foundation.
 
 ## Features
 
 - Browser-based monitoring with Playwright
-- Config-driven watchers
+- Config-driven, multi-watch provider architecture
 - Multi-date availability scanning
 - Snapshot-based change detection
-- Email notifications
-- Real-time dashboard with WebSockets
-- Background scheduling
-- Rate-limit handling
-- Per-watch state storage
+- Email notifications and a real-time WebSocket dashboard
+- Background scheduling and rate-limit handling
+- Watch CRUD API and per-watch state storage
 
-## Architecture
+## Current Provider
 
-                Config
-                  |
-                  v
-          Watch Management
-                  |
-                  v
-          Provider Watcher
-                  |
-                  v
-          Snapshot Storage
-                  |
-                  v
-         Change Detection Engine
-                  |
-                  v
-          Event Notification
-                  |
-                  v
-          Email + Dashboard
-
-## Current Watcher
-
-### AMC Movie Tickets
-
-Example use case:
-
-- Monitor The Odyssey
-- AMC Lincoln Square 13
-- IMAX 70MM
-- Scan future show dates
-- Alert when tickets become available
+The AMC provider can monitor a movie, theater, and format across future show
+dates and alert when matching tickets become available.
 
 ## Project Structure
 
-.
-├── config/
-│   └── watches.json        # Watch configurations
-│
-├── watchers/
-│   └── amc.js              # AMC Playwright watcher
-│
-├── services/
-│   ├── monitor.js          # Monitoring engine
-│   ├── scheduler.js        # Background scheduler
-│   ├── snapshot-store.js   # Historical state
-│   ├── compare.js          # Change detection
-│   ├── event-engine.js     # Event generation
-│   └── email.js             # Notifications
-│
-├── logs/
-│   └── latest/             # Current watch state
-│
-└── index.js                # Application entry point
+```text
+config/
+  watches.json
+routes/
+services/
+  providers/
+    index.js
+    amc.js
+  monitor.js
+  scheduler.js
+  snapshot-store.js
+  compare.js
+  event-engine.js
+  email.js
+public/
+products/
+docs/
+index.js
+```
 
 ## Running Locally
 
-Install dependencies:
-
 ```bash
 npm install
-Start application:
+npm test
 npm start
-Dashboard:
-http://localhost:3000
-Adding a Watch
-Add a configuration entry:
+```
+
+The dashboard is available at <http://localhost:3000>.
+
+## Adding a Watch
+
+Use the dashboard/API or add an entry to `config/watches.json`:
+
+```json
 {
   "id": "example-watch",
   "provider": "AMC",
   "enabled": true,
   "movie": "Example Movie",
   "theater": "Example Theater",
-  "format": "IMAX"
+  "format": "IMAX",
+  "pageUrl": "https://www.amctheatres.com/example"
 }
-Future Directions
-Potential monitoring categories:
-Movie and concert tickets
-Broadway releases
-Job postings
-Apartment listings
-Product availability
-Flight price changes
-The goal is to create a general opportunity detection platform.
+```
 
 ## Docker
-
-Build and start the application:
 
 ```bash
 docker compose build
 docker compose up -d
-Check status:
 docker compose ps
-View logs:
 docker compose logs -f
-Stop:
-docker compose down
-The dashboard is available at:
-http://localhost:3000
+```
+
+Stop the service with `docker compose down`.
+
+## Product Evolution
+
+This repository is evolving into a modular suite:
+
+- **Opportunity Agent** — the existing monitoring platform
+- **NYC Event Finder** — event discovery and recommendations
+- **AI Sports & Fantasy Hub** — football and basketball assistance,
+  mini-leagues, and future AI scoring/ranking
+
+The existing application remains the only running product while compatibility
+coverage is expanded. See [the product architecture](docs/PRODUCT_ARCHITECTURE.md)
+and [incremental roadmap](docs/ROADMAP.md).
+
+## Secrets
+
+Copy `.env.example` to `.env` for local configuration. Never commit
+`.env` or API keys. Rotate any credential that may previously have been
+shared outside the local environment.
