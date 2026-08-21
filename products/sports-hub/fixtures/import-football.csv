@@ -1,0 +1,9 @@
+record_type,sport,team_id,team_name,manager_id,manager_name,league_name,season,scoring_period,projection_date,starter_positions,scoring_rules,slot_id,player_id,player_name,position,role,projected_points,availability,status
+ROSTER,FOOTBALL,imported-football,Harlem Huddle,manager-football,Jamie Rivera,Neighborhood PPR,2026,Week 1,2026-08-21,QB|RB|WR|TE,,qb1,ff-qb-1,Cameron Fields,QB,STARTER,21.4,1,ACTIVE
+ROSTER,FOOTBALL,imported-football,Harlem Huddle,manager-football,Jamie Rivera,Neighborhood PPR,2026,Week 1,2026-08-21,QB|RB|WR|TE,,rb1,ff-rb-1,Malik Turner,RB,STARTER,13.8,0.8,QUESTIONABLE
+ROSTER,FOOTBALL,imported-football,Harlem Huddle,manager-football,Jamie Rivera,Neighborhood PPR,2026,Week 1,2026-08-21,QB|RB|WR|TE,,wr1,ff-wr-1,Devin Moss,WR,STARTER,14.2,1,ACTIVE
+ROSTER,FOOTBALL,imported-football,Harlem Huddle,manager-football,Jamie Rivera,Neighborhood PPR,2026,Week 1,2026-08-21,QB|RB|WR|TE,,te1,ff-te-1,Ryan Lake,TE,STARTER,8.5,1,ACTIVE
+ROSTER,FOOTBALL,imported-football,Harlem Huddle,manager-football,Jamie Rivera,Neighborhood PPR,2026,Week 1,2026-08-21,QB|RB|WR|TE,,bench1,ff-rb-2,Andre Cole,RB,BENCH,16.1,1,ACTIVE
+AVAILABLE,FOOTBALL,imported-football,Harlem Huddle,manager-football,Jamie Rivera,Neighborhood PPR,2026,Week 1,2026-08-21,QB|RB|WR|TE,,,ff-rb-3,Taylor Stone,RB,,19.3,1,ACTIVE
+AVAILABLE,FOOTBALL,imported-football,Harlem Huddle,manager-football,Jamie Rivera,Neighborhood PPR,2026,Week 1,2026-08-21,QB|RB|WR|TE,,,ff-wr-3,Jordan Reed,WR,,18.4,1,ACTIVE
+AVAILABLE,FOOTBALL,imported-football,Harlem Huddle,manager-football,Jamie Rivera,Neighborhood PPR,2026,Week 1,2026-08-21,QB|RB|WR|TE,,,ff-te-3,Drew King,TE,,12.6,1,ACTIVE

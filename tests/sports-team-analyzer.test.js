@@ -10,6 +10,8 @@ const { createTeam } = require("../products/sports-hub/domain/models");
 const { TEAM_SCORE_VERSION, analyzeTeam, recommendImprovements } = require("../products/sports-hub/domain/team-analysis");
 const { createTeamStore } = require("../products/sports-hub/services/team-store");
 const { createEntitlementService, TIERS } = require("../products/sports-hub/services/entitlements");
+const { createAnalysisStore } = require("../products/sports-hub/services/analysis-store");
+const { createImportStore } = require("../products/sports-hub/services/import-store");
 const { createSportsHubRouter } = require("../products/sports-hub");
 
 async function temporaryStore() {
@@ -96,7 +98,7 @@ test("teams persist under an isolated default profile", async () => {
 test("Sports Hub team APIs create, list, retrieve, analyze, and protect premium details", async () => {
   const { directory, store } = await temporaryStore();
   try {
-    await withServer(createSportsHubRouter({ teamStore: store }), async (base) => {
+    await withServer(createSportsHubRouter({ teamStore: store, analysisStore: createAnalysisStore({ file: path.join(directory, "analyses.json") }), importStore: createImportStore({ file: path.join(directory, "imports.json") }) }), async (base) => {
       const created = await fetch(`${base}/teams`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(football) });
       assert.equal(created.status, 201);
       assert.equal((await fetch(`${base}/teams`)).status, 200);

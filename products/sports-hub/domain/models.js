@@ -1,4 +1,5 @@
 const { normalizeSport } = require("./sports");
+const { getScoringRules } = require("./scoring");
 
 const ROSTER_ROLES = Object.freeze(["STARTER", "BENCH"]);
 const PLAYER_STATUSES = Object.freeze(["ACTIVE", "QUESTIONABLE", "DOUBTFUL", "OUT", "UNKNOWN"]);
@@ -115,7 +116,8 @@ function createLeagueSettings(input, sport) {
     sport: normalizedSport,
     name: input.name ? requireText(input.name, "leagueSettings.name") : "My League",
     starterPositions,
-    scoringLabel: input.scoringLabel ? requireText(input.scoringLabel, "leagueSettings.scoringLabel", 80) : "Custom fantasy points"
+    scoringLabel: input.scoringLabel ? requireText(input.scoringLabel, "leagueSettings.scoringLabel", 80) : "Custom fantasy points",
+    scoringRules: getScoringRules(normalizedSport, input.scoringRules ?? {})
   });
 }
 

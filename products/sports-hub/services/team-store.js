@@ -23,7 +23,15 @@ function createTeamStore({ file = DEFAULT_TEAMS_FILE, now = () => new Date() } =
     });
     return team;
   }
-  return { get, list, save };
+  async function create(input, profileId = DEFAULT_PROFILE_ID) {
+    if (await get(input.id, profileId)) throw new Error("A team with this ID already exists. Choose a new team ID or explicitly update it.");
+    return save(input, profileId);
+  }
+  async function update(input, profileId = DEFAULT_PROFILE_ID) {
+    if (!(await get(input.id, profileId))) throw new Error("Team not found for explicit update.");
+    return save(input, profileId);
+  }
+  return { create, get, list, save, update };
 }
 
 module.exports = { DEFAULT_PROFILE_ID, DEFAULT_TEAMS_FILE, createTeamStore };
