@@ -1,11 +1,25 @@
-# NYC Opportunity Agent
+# Sports Hub
 
-A configurable monitoring agent that watches websites for changes and sends
-real-time alerts when opportunities become available. It was originally built
-for AMC IMAX 70MM ticket releases and now provides a general monitoring
-foundation.
+Sports Hub is the primary product in this repository: a mobile-first fantasy
+team analyzer for football, basketball, and soccer. It gives users a clear,
+versioned Team Score, roster strengths, and server-protected recommendations
+without requiring a fantasy-platform connection.
 
-## Features
+The original Opportunity Agent monitoring service and NYC Event Finder remain
+available as Labs products with their existing APIs, persistence, and URLs.
+
+## Sports Hub
+
+- Phone-first guided lineup builder and offline sample teams
+- Football, basketball, and soccer support
+- Explainable 0–100 Team Score with completeness and confidence
+- Two complete free recommendations with premium details removed server-side
+- Advanced user-provided CSV and JSON imports
+- Privacy-safe share summaries and cards
+
+Open <http://localhost:3000> or the compatible `/sports-hub/` URL.
+
+## Labs: Opportunity Agent
 
 - Browser-based monitoring with Playwright
 - Config-driven, multi-watch provider architecture
@@ -50,7 +64,8 @@ npm test
 npm start
 ```
 
-The dashboard is available at <http://localhost:3000>.
+The monitoring dashboard is available at <http://localhost:3000/opportunity-agent/>.
+NYC Event Finder remains at <http://localhost:3000/event-finder/>.
 
 ## Adding a Watch
 
@@ -79,18 +94,19 @@ docker compose logs -f
 
 Stop the service with `docker compose down`.
 
-## Product Evolution
+## Deployment boundaries
 
-This repository is evolving into a modular suite:
+Sports Hub is always mounted. Legacy background processes remain enabled by
+default so current behavior does not change:
 
-- **Opportunity Agent** — the existing monitoring platform
-- **NYC Event Finder** — event discovery and recommendations
-- **AI Sports & Fantasy Hub** — football and basketball assistance,
-  mini-leagues, and future AI scoring/ranking
+- `LEGACY_MONITORING_ENABLED=false` prevents the AMC scheduler from starting.
+- `EVENT_FINDER_ENABLED=false` prevents the Event Finder API router from mounting.
 
-The existing application remains the only running product while compatibility
-coverage is expanded. See [the product architecture](docs/PRODUCT_ARCHITECTURE.md)
-and [incremental roadmap](docs/ROADMAP.md).
+These flags are intended for a future sports-only public deployment. They do
+not delete legacy code or data. The Labs pages and persisted files should be
+handled independently by deployment routing when a process is disabled. See
+[the product architecture](docs/PRODUCT_ARCHITECTURE.md) and
+[incremental roadmap](docs/ROADMAP.md).
 
 ## Secrets
 

@@ -1,12 +1,20 @@
 # Product Architecture
 
-This repository will house three related products with explicit boundaries.
+This repository houses Sports Hub as its primary customer product plus two
+preserved Labs products with explicit boundaries.
 They may share infrastructure, but they must not import each other's domain
 logic directly.
 
 ## Product boundaries
 
-### Opportunity Agent
+### Sports Hub (primary)
+
+The root experience and primary brand. It owns fantasy sport models, local
+teams, imports, analysis snapshots, Team Score, recommendations, entitlements,
+and the football, basketball, and soccer interfaces. `/sports-hub/` remains a
+compatibility URL while `/` serves the same landing experience directly.
+
+### Opportunity Agent (Labs)
 
 The existing production application. It owns watches, monitoring providers,
 snapshots, change detection, events, notifications, scheduling, and the
@@ -16,18 +24,15 @@ Current code remains at the repository root while it is stabilized. Moving it
 under a product directory should be a later, mechanical change with
 compatibility tests.
 
-### NYC Event Finder
+### NYC Event Finder (Labs)
 
 A discovery and recommendation product. It will own event-source ingestion,
 event normalization, deduplication, preference matching, recommendations, and
 saved events. Discovery results are not Opportunity Agent watch snapshots.
 
-### AI Sports & Fantasy Hub
-
-A fantasy football and basketball assistant. It will own sports data
-adapters, roster and matchup advice, an internal mini-league, and eventually
-AI-generated scoring and ranking. AI explanations must be separated from
-deterministic league rules and scoring calculations.
+Runtime boundaries are deliberately provider-neutral. A sports-only deployment
+may set `LEGACY_MONITORING_ENABLED=false` and `EVENT_FINDER_ENABLED=false`.
+Both default to enabled; neither flag deletes persistence or source code.
 
 ## Shared code policy
 

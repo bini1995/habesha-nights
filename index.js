@@ -22,7 +22,11 @@ const scheduler = createScheduler({
   rateLimitIntervalMinutes: 180
 });
 
-scheduler.start();
+if (process.env.LEGACY_MONITORING_ENABLED !== "false") {
+  scheduler.start();
+} else {
+  console.log("Legacy monitoring is disabled by configuration.");
+}
 
 process.on("SIGINT", async () => {
   console.log("");

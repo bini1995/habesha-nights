@@ -61,6 +61,14 @@
   privacy-safe sharing, and reduced-motion responsive layouts.
 - [x] Extend deterministic Team Score analysis to soccer using only supplied
   projections, without claiming a universal official soccer scoring system.
+- [x] Serve Sports Hub directly at `/` while preserving `/sports-hub/` and move
+  legacy products into a quiet Labs navigation boundary.
+- [x] Fix hidden-step mobile validation across every sport with visible errors,
+  focus movement, backward navigation, and correction coverage.
+- [x] Add a compact phone-first landing page, sticky builder actions, optional
+  league names, session-scoped drafts, and incomplete-analysis language.
+- [x] Add explicit configuration boundaries for future sports-only deployments
+  without changing default AMC or Event Finder behavior.
 - Add one licensed live provider adapter only after commercial-use permission
   is confirmed.
 - [x] Build read-only roster analysis and lineup recommendations first.
