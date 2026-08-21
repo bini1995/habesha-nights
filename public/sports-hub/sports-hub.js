@@ -1,6 +1,7 @@
 const rows = document.querySelector("#roster-rows");
 const notice = document.querySelector("#notice");
 let availablePlayers = [];
+let currentPreview = null;
 
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]); }
 function positionsFor(sport) { return sport === "BASKETBALL" ? ["PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"] : ["QB", "RB", "WR", "TE", "K", "DST", "FLEX"]; }
@@ -51,6 +52,11 @@ function render(result) {
   document.querySelector("#grade").textContent = analysis.letterGrade;
   document.querySelector("#score-version").textContent = `Team Score v${analysis.teamScoreVersion}`;
   document.querySelector("#confidence").textContent = `${analysis.dataCompleteness.confidence} confidence · ${analysis.dataCompleteness.percentage}% complete`;
+  const provenance = document.querySelector("#provenance");
+  if (analysis.provenance) {
+    provenance.hidden = false;
+    provenance.innerHTML = `<strong>Input provenance</strong><span>${escapeHtml(analysis.provenance.source)}</span><span>${escapeHtml(analysis.provenance.scoringPeriod ?? "No scoring period")}</span><span>Projection: ${escapeHtml(analysis.provenance.projectionDate ?? "not supplied")}</span><span>Analysis v${escapeHtml(analysis.provenance.analysisVersion)}</span>${analysis.provenance.staleDataWarning ? `<em>${escapeHtml(analysis.provenance.staleDataWarning)}</em>` : ""}`;
+  } else provenance.hidden = true;
   document.querySelector("#components").innerHTML = Object.entries(analysis.components).map(([key, value]) => `<div class="component"><div><span>${labelComponent(key)}</span><strong>${value}</strong></div><div class="meter" aria-label="${labelComponent(key)} ${value} out of 100"><span style="width:${value}%"></span></div></div>`).join("");
   document.querySelector("#reasons").innerHTML = `<ul>${analysis.reasons.map((reason) => `<li>${escapeHtml(reason)}</li>`).join("")}</ul>`;
   document.querySelector("#recommendations").innerHTML = result.recommendations.length ? result.recommendations.map((item) => `<article class="recommendation"><span class="rank">${item.rank}</span><div><h3>${escapeHtml(recommendationTitle(item))}</h3><p>${escapeHtml(item.reason)}</p></div><span class="improvement">+${item.expectedScoreImprovement} Team Score</span></article>`).join("") : "<p>No positive roster moves were found in the supplied options.</p>";
@@ -58,6 +64,27 @@ function render(result) {
   if (!premium.hidden) premium.querySelector("strong").textContent = `${result.lockedRecommendationCount} more ranked move${result.lockedRecommendationCount === 1 ? "" : "s"} available`;
   document.querySelector("#results").hidden = false;
   document.querySelector("#results").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function loadImportExample(format) {
+  const response = await fetch(`/api/sports-hub/import/templates/${format.toLowerCase()}`);
+  if (!response.ok) throw new Error("Example import could not be loaded.");
+  document.querySelector("#import-format").value = format;
+  document.querySelector("#import-sport").value = format === "CSV" ? "FOOTBALL" : "BASKETBALL";
+  document.querySelector("#import-data").value = await response.text();
+  document.querySelector("#import-notice").textContent = `${format} example loaded. Preview it to validate every field.`;
+}
+
+function renderImportPreview(preview) {
+  currentPreview = preview;
+  const normalized = preview.normalized;
+  document.querySelector("#preview-title").textContent = `${normalized.team.name} · ${normalized.sport === "FOOTBALL" ? "Football" : "Basketball"}`;
+  document.querySelector("#preview-freshness").textContent = `${preview.freshness.status} · ${preview.freshness.ageDays} days old`;
+  document.querySelector("#preview-fields").innerHTML = [
+    ["Manager", normalized.manager.name], ["League", normalized.team.leagueSettings.name], ["Season", normalized.season], ["Scoring period", normalized.scoringPeriod], ["Roster", `${normalized.team.roster.length} players`], ["Waiver pool", `${normalized.availablePlayers.length} players`], ["Accepted", preview.rowCounts.accepted], ["Checksum", preview.checksum.slice(0, 12)]
+  ].map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("");
+  document.querySelector("#preview-messages").innerHTML = normalized.warnings.length ? `<div class="warnings"><strong>Warnings</strong><ul>${normalized.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul></div>` : `<p class="success">No validation warnings.</p>`;
+  document.querySelector("#import-preview").hidden = false;
 }
 
 document.querySelector("#add-player").addEventListener("click", () => addRosterRow());
@@ -74,6 +101,36 @@ document.querySelector("#team-form").addEventListener("submit", async (event) =>
     const result = await analyzed.json(); if (!analyzed.ok) throw new Error(result.error ?? "Analysis failed.");
     render(result); notice.textContent = "Analysis complete and team saved locally.";
   } catch (error) { notice.textContent = error.message; }
+});
+
+document.querySelector("#import-file").addEventListener("change", async (event) => {
+  const [file] = event.target.files; if (!file) return;
+  document.querySelector("#import-data").value = await file.text();
+  document.querySelector("#import-format").value = file.name.toLowerCase().endsWith(".json") ? "JSON" : "CSV";
+  document.querySelector("#import-notice").textContent = `${file.name} is ready to preview. The raw file remains in your browser.`;
+});
+document.querySelector("#load-csv-example").addEventListener("click", () => loadImportExample("CSV").catch((error) => { document.querySelector("#import-notice").textContent = error.message; }));
+document.querySelector("#load-json-example").addEventListener("click", () => loadImportExample("JSON").catch((error) => { document.querySelector("#import-notice").textContent = error.message; }));
+document.querySelector("#import-form").addEventListener("submit", async (event) => {
+  event.preventDefault(); const importNotice = document.querySelector("#import-notice"); importNotice.textContent = "Parsing and validating import…";
+  try {
+    const file = document.querySelector("#import-file").files[0];
+    const response = await fetch("/api/sports-hub/imports/preview", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceType: document.querySelector("#import-format").value, sport: document.querySelector("#import-sport").value, filename: file?.name ?? null, content: document.querySelector("#import-data").value }) });
+    const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Import preview failed.");
+    renderImportPreview(body.preview); importNotice.textContent = "Preview ready. Review it before confirming.";
+  } catch (error) { currentPreview = null; document.querySelector("#import-preview").hidden = true; importNotice.textContent = error.message; }
+});
+document.querySelector("#confirm-import").addEventListener("click", async () => {
+  const importNotice = document.querySelector("#import-notice");
+  if (!currentPreview) { importNotice.textContent = "Preview an import before confirming."; return; }
+  importNotice.textContent = "Confirming import and recording provenance…";
+  try {
+    const confirmed = await fetch("/api/sports-hub/imports/confirm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ previewId: currentPreview.previewId, operation: document.querySelector("#import-operation").value }) });
+    const confirmedBody = await confirmed.json(); if (!confirmed.ok) throw new Error(confirmedBody.error ?? "Import confirmation failed.");
+    const analyzed = await fetch(`/api/sports-hub/teams/${encodeURIComponent(confirmedBody.import.teamId)}/reanalyze`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ importId: confirmedBody.import.importId }) });
+    const result = await analyzed.json(); if (!analyzed.ok) throw new Error(result.error ?? "Imported team analysis failed.");
+    render(result); importNotice.textContent = "Import confirmed. Team, provenance, and analysis snapshot saved."; currentPreview = null;
+  } catch (error) { importNotice.textContent = error.message; }
 });
 
 loadSample("football").catch(() => { addRosterRow({ role: "STARTER" }); notice.textContent = "Enter a roster to begin."; });
