@@ -13,6 +13,7 @@ available as Labs products with their existing APIs, persistence, and URLs.
 - Phone-first guided lineup builder and offline sample teams
 - Football, basketball, and soccer support
 - Consent-based roster screenshot extraction with a required review step
+- Canonical player matching with explicit ambiguity review and provenance
 - Explainable 0–100 Team Score with completeness and confidence
 - Two complete free recommendations with premium details removed server-side
 - Advanced user-provided CSV and JSON imports
@@ -121,3 +122,9 @@ JPEG, and WebP images up to 6 MB. Sports Hub sends an image to OpenAI only
 after the user checks the disclosure, requests `store: false`, never saves the
 raw image, and requires the user to review extracted players before a team can
 be submitted. AI extraction may misread cropped or unclear screenshots.
+
+Player identity resolution defaults to a clearly labeled fictional offline
+directory. It can match exact names and aliases, surface likely typo matches,
+and require a choice when multiple players share a name. It does not provide
+live projections, injuries, or schedules. Those capabilities remain behind the
+provider contract until a commercial data license is approved.

@@ -111,3 +111,31 @@ Endpoints under `/api/sports-hub`:
   supported image types and the upload limit.
 - `POST /roster-images/parse` requires `{ consent: true, sport,
   imageDataUrl }` and returns a versioned extraction preview.
+
+## Phase 3F player identity foundation
+
+Screenshot names now pass through deterministic player identity resolution
+before the review step. The matcher handles accents, punctuation, common name
+suffixes, aliases, close spellings, duplicate names, sport, and position. It
+returns one of `MATCHED`, `AMBIGUOUS`, or `UNMATCHED`; fuzzy matches are never
+accepted automatically.
+
+Ambiguous players receive a phone-friendly “Which player is this?” control.
+The user may choose a candidate or keep the typed name. Editing a linked name
+or position removes its identity provenance. A reviewed team may persist the
+canonical player ID, provider ID, provider player ID, match method, match time,
+and source update time.
+
+The default provider is a fictional offline sample with only the
+`PLAYER_DIRECTORY` capability. `PROJECTIONS`, `INJURIES`, and `SCHEDULES` are
+explicit unimplemented capabilities until a licensed provider is selected.
+
+Identity endpoints under `/api/sports-hub`:
+
+- `GET /player-identities/status` reports the active directory, capability
+  list, freshness, and whether its data is live.
+- `POST /player-identities/resolve` accepts `{ sport, players }` and returns
+  versioned results, counts, provider provenance, and a resolution timestamp.
+
+See the [sports data provider evaluation](../../docs/SPORTS_DATA_PROVIDER_EVALUATION.md)
+for the live-data decision gate.

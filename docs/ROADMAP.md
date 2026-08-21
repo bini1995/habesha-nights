@@ -73,6 +73,12 @@
   strict structured output, transient image handling, and editable previews.
 - [x] Require confirmation and normal domain validation before an extracted
   roster can be persisted or analyzed.
+- [x] Add canonical player identity matching with aliases, typo candidates,
+  duplicate-name handling, position disambiguation, and explicit user review.
+- [x] Preserve identity provenance on confirmed teams and invalidate the link
+  when a user edits the matched name or position.
+- [x] Add a provider-neutral capability boundary for player directories,
+  projections, injuries, and schedules with a fictional offline adapter.
 - Add one licensed live provider adapter only after commercial-use permission
   is confirmed.
 - [x] Build read-only roster analysis and lineup recommendations first.
@@ -89,7 +95,9 @@
 
 ## Immediate next slice
 
-Add player identity resolution and a licensed projection/injury data source so
-screenshot names can be matched to current players without inventing data.
-Then add saved analysis comparison while continuing to preserve Opportunity
-Agent and Event Finder compatibility behind their dedicated product entry points.
+Evaluate a SportsDataIO development integration against the provider contract,
+using only scrambled trial fixtures until commercial display and derived-score
+rights are confirmed. Map stable player IDs, projections, injuries, schedules,
+freshness, and source attribution for one sport first. Do not expose a live-data
+feature flag until licensing, caching, and redistribution terms are documented.
+Then add saved analysis comparison while preserving the Labs products.

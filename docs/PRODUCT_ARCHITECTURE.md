@@ -21,6 +21,18 @@ uses `store: false`. Sports Hub persists neither the image nor the unconfirmed
 extraction. Only a roster that the user reviews and submits may enter normal
 team persistence. The OpenAI credential remains server-side.
 
+Player identity resolution is a separate deterministic step after image
+transcription. It normalizes names and aliases, considers the selected sport
+and position, and returns matched, ambiguous, or unmatched results. A user must
+resolve ambiguity explicitly. Confirmed teams may persist canonical IDs plus
+provider provenance; editing the name or position in the interface removes the
+link. Existing manually entered teams remain valid with no identity metadata.
+
+The `PlayerDataProvider` boundary advertises individual capabilities for player
+directories, projections, injuries, and schedules. The default adapter exposes
+only a fictional offline directory. No adapter may claim live data or supply
+projections until its commercial-use rights and source mappings are reviewed.
+
 ### Opportunity Agent (Labs)
 
 The existing production application. It owns watches, monitoring providers,

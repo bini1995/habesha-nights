@@ -1,6 +1,7 @@
 # Sports Hub
 
-Sports Hub is the primary product interface at `/sports-hub/`. It offers separate,
+Sports Hub is the primary product interface at `/`, with `/sports-hub/` kept as
+a compatibility URL. It offers separate,
 indexable football, basketball, and soccer Team Analyzer portals plus an advanced
 CSV/JSON import workflow at `/sports-hub/import/`.
 
@@ -27,3 +28,9 @@ Team Score normalizes the projected points the user supplies.
 Share summaries and downloadable cards include sport, team name, score, grade,
 and strongest component. They do not contain roster names or private input data.
 No platform credentials or external provider connection is required.
+
+When image extraction is configured, users may upload a roster screenshot and
+review the visible names before saving. A separate deterministic identity step
+then links clear matches, asks the user to resolve duplicate or similar names,
+and leaves unknown players unlinked. The current directory is fictional sample
+data; it does not provide live projections, injuries, or schedules.
