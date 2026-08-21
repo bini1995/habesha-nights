@@ -8,6 +8,9 @@ const stateRouter = require("../routes/state");
 const providersRouter = require("../routes/providers");
 const eventsRouter = require("../routes/events");
 const { initialize } = require("./websocket");
+const {
+  createEventFinderRouter
+} = require("../products/event-finder");
 
 const {
   getAllWatches,
@@ -32,6 +35,10 @@ function createDashboardServer({
   app.use("/api/providers", providersRouter);
   app.use("/api/events", eventsRouter);
   app.use("/api/watches", watchesRouter);
+  app.use(
+    "/api/event-finder",
+    createEventFinderRouter()
+  );
 
   app.use(
     express.static(
