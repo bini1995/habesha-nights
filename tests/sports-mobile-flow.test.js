@@ -10,7 +10,7 @@ const { createTeamStore } = require("../products/sports-hub/services/team-store"
 const { createImportStore } = require("../products/sports-hub/services/import-store");
 const { createAnalysisStore } = require("../products/sports-hub/services/analysis-store");
 
-async function testServer({ rosterImageParser } = {}) {
+async function testServer({ playerIdentityService, rosterImageParser } = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "sports-mobile-"));
   const teamStore = createTeamStore({ file: path.join(directory, "teams.json") });
   const app = express();
@@ -20,6 +20,7 @@ async function testServer({ rosterImageParser } = {}) {
     teamStore,
     importStore: createImportStore({ file: path.join(directory, "imports.json") }),
     analysisStore: createAnalysisStore({ file: path.join(directory, "analyses.json") }),
+    playerIdentityService,
     rosterImageParser
   }));
   app.get("/", (request, response) => response.sendFile(path.join(__dirname, "..", "public", "sports-hub", "index.html")));
@@ -77,6 +78,76 @@ test("root metadata and mobile navigation present Sports Hub first with legacy t
 test("390px screenshot scan requires consent and creates an editable roster preview", async () => {
   let received;
   const runtime = await testServer({
+    playerIdentityService: {
+      status() {
+        return {
+          enabled: true,
+          liveData: false,
+          provider: {
+            capabilities: ["PLAYER_DIRECTORY"],
+            id: "test-directory",
+            live: false,
+            mode: "OFFLINE_SAMPLE",
+            name: "Test directory",
+            updatedAt: "2026-08-21T00:00:00.000Z"
+          },
+          schemaVersion: "test-identity-schema"
+        };
+      },
+      async resolveRoster() {
+        const provider = this.status().provider;
+        return {
+          counts: { ambiguous: 1, matched: 1, unmatched: 0 },
+          provider,
+          resolvedAt: "2026-08-21T12:00:00.000Z",
+          schemaVersion: "test-identity-schema",
+          sport: "FOOTBALL",
+          results: [{
+            candidates: [{
+              confidence: 1,
+              id: "f-qb-a",
+              matchMethod: "EXACT_NAME",
+              name: "Alex Carter",
+              position: "QB",
+              providerId: provider.id,
+              providerPlayerId: "provider-alex",
+              sport: "FOOTBALL",
+              teamLabel: "Brooklyn Test"
+            }],
+            input: { name: "Alex Carter", position: "QB", sport: "FOOTBALL" },
+            inputIndex: 0,
+            selectedPlayerId: "f-qb-a",
+            status: "MATCHED"
+          }, {
+            candidates: [{
+              confidence: 0.86,
+              id: "f-wr-a",
+              matchMethod: "FUZZY",
+              name: "Jordan Miles",
+              position: "WR",
+              providerId: provider.id,
+              providerPlayerId: "provider-jordan-a",
+              sport: "FOOTBALL",
+              teamLabel: "Queens Test"
+            }, {
+              confidence: 0.82,
+              id: "f-wr-b",
+              matchMethod: "FUZZY",
+              name: "Jordan Miles",
+              position: "WR",
+              providerId: provider.id,
+              providerPlayerId: "provider-jordan-b",
+              sport: "FOOTBALL",
+              teamLabel: "Bronx Test"
+            }],
+            input: { name: "Jordan Miles", position: "WR", sport: "FOOTBALL" },
+            inputIndex: 1,
+            selectedPlayerId: null,
+            status: "AMBIGUOUS"
+          }]
+        };
+      }
+    },
     rosterImageParser: {
       status() {
         return {
@@ -150,6 +221,19 @@ test("390px screenshot scan requires consent and creates an editable roster prev
     assert.equal(received.sport, "FOOTBALL");
     assert.match(received.imageDataUrl, /^data:image\/png;base64,/);
     assert.equal((await runtime.teamStore.list()).length, 0);
+    const identityChoice = page.getByLabel("Which player is this?");
+    await identityChoice.waitFor();
+    await page.getByRole("button", { name: "Review lineup" }).click();
+    assert.match(await page.locator("#step-error").innerText(), /Choose the matching player/);
+    await identityChoice.selectOption("f-wr-b");
+    await page.getByRole("button", { name: "Review lineup" }).click();
+    await page.getByRole("button", { name: "Get my score" }).click();
+    await page.getByText("Your Team Score").waitFor();
+    const savedTeams = await runtime.teamStore.list();
+    assert.equal(savedTeams.length, 1);
+    assert.equal(savedTeams[0].roster[0].player.identity.matchMethod, "EXACT_NAME");
+    assert.equal(savedTeams[0].roster[1].player.identity.matchMethod, "USER_CONFIRMED");
+    assert.equal(savedTeams[0].roster[1].player.identity.canonicalPlayerId, "f-wr-b");
     await page.close();
   } finally {
     await browser?.close();

@@ -5,6 +5,22 @@ const defaults = { FOOTBALL: ["QB","RB","WR","TE"], BASKETBALL: ["PG","SG","SF",
 const list = document.querySelector("#player-list"); let currentStep = 1; let sampleOptions = [];
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[character]);
 const slug = (value, fallback) => String(value || fallback).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60) || fallback;
+function identityReviewMarkup(resolution, storedIdentity) {
+  if (resolution?.status === "UNMATCHED") {
+    return `<div class="identity-review unmatched"><strong>No player match yet</strong><p>Keep the typed name. Live projections will stay unavailable until this player is linked.</p></div>`;
+  }
+  if (resolution) {
+    const selected=resolution.selectedPlayerId||"";
+    const question=resolution.status==="MATCHED"?"Confirm player match":"Which player is this?";
+    const prompt=resolution.status==="AMBIGUOUS"?'<option value="">Choose the right player</option>':"";
+    const options=resolution.candidates.map(candidate=>`<option value="${escapeHtml(candidate.id)}" ${candidate.id===selected?"selected":""}>${escapeHtml(candidate.name)} · ${escapeHtml(candidate.position)}${candidate.teamLabel?` · ${escapeHtml(candidate.teamLabel)}`:""}</option>`).join("");
+    return `<div class="identity-review ${resolution.status.toLowerCase()}"><label>${question}<select class="p-identity" required>${prompt}${options}<option value="__manual__">None of these—keep typed name</option></select></label><p>${resolution.status==="MATCHED"?"We found one clear directory match. Check it before continuing.":"Choose a player or keep the typed name before continuing."}</p></div>`;
+  }
+  if (storedIdentity) {
+    return `<div class="identity-review matched stored-identity"><strong>Player identity linked</strong><p>This link will be removed if you change the name or position.</p></div>`;
+  }
+  return "";
+}
 function playerCard(data={}) {
   const card=document.createElement("article");
   const selectedPosition=positions.includes(data.player?.position)
@@ -17,9 +33,57 @@ function playerCard(data={}) {
   const confidenceMessage=Number.isFinite(extractionConfidence)
     ? `<p class="scan-confidence">Screenshot read: ${Math.round(extractionConfidence*100)}% confidence. Check this player.</p>`
     : "";
+  const identityMessage=identityReviewMarkup(data.identityResolution,data.player?.identity);
 
   card.className="player-card";
-  card.innerHTML=`<label>Player name<input class="p-name" required value="${escapeHtml(data.player?.name||"")}" placeholder="Player name"></label><label>Position<select class="p-position" required>${selectedPosition?"":'<option value="">Choose</option>'}${positions.map(p=>`<option value="${p}" ${p===selectedPosition?"selected":""}>${p}</option>`).join("")}</select></label><label>Lineup role<select class="p-role" required>${selectedRole?"":'<option value="">Choose starter or bench</option>'}<option value="STARTER" ${selectedRole==="STARTER"?"selected":""}>Starting lineup</option><option value="BENCH" ${selectedRole==="BENCH"?"selected":""}>Bench</option></select></label><div class="player-actions" aria-label="Player actions"><button type="button" data-up aria-label="Move player up">↑</button><button type="button" data-down aria-label="Move player down">↓</button><button type="button" data-remove aria-label="Remove player">×</button></div>${confidenceMessage}<details><summary>More details for a sharper score</summary><div><label>Projected points<input class="p-points" type="number" min="0" max="1000" step="0.1" value="${data.projection?.projectedFantasyPoints??""}"></label><label>Status<select class="p-status">${["ACTIVE","QUESTIONABLE","DOUBTFUL","OUT","UNKNOWN"].map(s=>`<option value="${s}" ${s===(data.player?.status||"ACTIVE")?"selected":""}>${s[0]+s.slice(1).toLowerCase()}</option>`).join("")}</select></label></div></details>`;
+  card.innerHTML=`<label>Player name<input class="p-name" required value="${escapeHtml(data.player?.name||"")}" placeholder="Player name"></label><label>Position<select class="p-position" required>${selectedPosition?"":'<option value="">Choose</option>'}${positions.map(p=>`<option value="${p}" ${p===selectedPosition?"selected":""}>${p}</option>`).join("")}</select></label><label>Lineup role<select class="p-role" required>${selectedRole?"":'<option value="">Choose starter or bench</option>'}<option value="STARTER" ${selectedRole==="STARTER"?"selected":""}>Starting lineup</option><option value="BENCH" ${selectedRole==="BENCH"?"selected":""}>Bench</option></select></label><div class="player-actions" aria-label="Player actions"><button type="button" data-up aria-label="Move player up">↑</button><button type="button" data-down aria-label="Move player down">↓</button><button type="button" data-remove aria-label="Remove player">×</button></div>${confidenceMessage}${identityMessage}<details><summary>More details for a sharper score</summary><div><label>Projected points<input class="p-points" type="number" min="0" max="1000" step="0.1" value="${data.projection?.projectedFantasyPoints??""}"></label><label>Status<select class="p-status">${["ACTIVE","QUESTIONABLE","DOUBTFUL","OUT","UNKNOWN"].map(s=>`<option value="${s}" ${s===(data.player?.status||"ACTIVE")?"selected":""}>${s[0]+s.slice(1).toLowerCase()}</option>`).join("")}</select></label></div></details>`;
+  const nameInput=card.querySelector(".p-name");
+  const positionInput=card.querySelector(".p-position");
+  const identitySelect=card.querySelector(".p-identity");
+  let applyingIdentity=false;
+  const clearIdentity=()=>{
+    delete card.dataset.canonicalPlayerId;
+    delete card.dataset.identityMatchMethod;
+    delete card.dataset.identityMatchedAt;
+    delete card.dataset.identityProviderId;
+    delete card.dataset.identityProviderPlayerId;
+    delete card.dataset.identitySourceUpdatedAt;
+    if(identitySelect)identitySelect.value="__manual__";
+    card.querySelector(".stored-identity")?.remove();
+  };
+  const setIdentity=(candidate,matchMethod,matchedAt,sourceUpdatedAt,updateFields=false)=>{
+    if(!candidate)return clearIdentity();
+    card.dataset.canonicalPlayerId=candidate.id;
+    card.dataset.identityMatchMethod=matchMethod;
+    card.dataset.identityMatchedAt=matchedAt;
+    card.dataset.identityProviderId=candidate.providerId;
+    card.dataset.identityProviderPlayerId=candidate.providerPlayerId;
+    card.dataset.identitySourceUpdatedAt=sourceUpdatedAt||"";
+    if(updateFields){
+      applyingIdentity=true;
+      nameInput.value=candidate.name;
+      if(positions.includes(candidate.position))positionInput.value=candidate.position;
+      applyingIdentity=false;
+    }
+  };
+  if(data.player?.identity){
+    setIdentity({
+      id:data.player.identity.canonicalPlayerId,
+      providerId:data.player.identity.providerId,
+      providerPlayerId:data.player.identity.providerPlayerId
+    },data.player.identity.matchMethod,data.player.identity.matchedAt,data.player.identity.sourceUpdatedAt);
+  }
+  if(identitySelect){
+    identitySelect.onchange=()=>{
+      if(!identitySelect.value||identitySelect.value==="__manual__")return clearIdentity();
+      const candidate=data.identityResolution.candidates.find(item=>item.id===identitySelect.value);
+      const automatic=data.identityResolution.status==="MATCHED"&&candidate?.id===data.identityResolution.selectedPlayerId;
+      setIdentity(candidate,automatic?candidate.matchMethod:"USER_CONFIRMED",data.identityResolvedAt,data.identityProviderUpdatedAt,true);
+    };
+    if(identitySelect.value)identitySelect.onchange();
+  }
+  nameInput.addEventListener("input",()=>{if(!applyingIdentity)clearIdentity();});
+  positionInput.addEventListener("change",()=>{if(!applyingIdentity)clearIdentity();});
   card.querySelector("[data-remove]").onclick=()=>card.remove();
   card.querySelector("[data-up]").onclick=()=>card.previousElementSibling&&list.insertBefore(card,card.previousElementSibling);
   card.querySelector("[data-down]").onclick=()=>card.nextElementSibling&&list.insertBefore(card.nextElementSibling,card);
@@ -49,12 +113,16 @@ function validateActiveStep(){
   const invalid=[...section.querySelectorAll("input, select, textarea")].find((control)=>!control.checkValidity());
   const error=document.querySelector("#step-error");
   if(!invalid){error.textContent="";return true;}
-  error.textContent=currentStep===1?"Add a team name to continue.":"Add a name for each lineup spot, or remove any spot you do not need.";
+  error.textContent=currentStep===1
+    ? "Add a team name to continue."
+    : invalid.classList.contains("p-identity")
+      ? "Choose the matching player, or select ‘keep typed name,’ before continuing."
+      : "Add a name for each lineup spot, or remove any spot you do not need.";
   invalid.focus({preventScroll:true});
   invalid.scrollIntoView({behavior:"smooth",block:"center"});
   return false;
 }
-function roster(){return [...list.children].map((card,index)=>{const name=card.querySelector(".p-name").value.trim();const id=slug(name,`player-${index+1}`);const raw=card.querySelector(".p-points").value;return {id:`slot-${index+1}`,role:card.querySelector(".p-role").value,player:{id,name,position:card.querySelector(".p-position").value,status:card.querySelector(".p-status").value.toUpperCase()},projection:raw===""?null:{playerId:id,projectedFantasyPoints:Number(raw),source:"USER_SUPPLIED"}};});}
+function roster(){return [...list.children].map((card,index)=>{const name=card.querySelector(".p-name").value.trim();const id=card.dataset.canonicalPlayerId||slug(name,`player-${index+1}`);const raw=card.querySelector(".p-points").value;const identity=card.dataset.canonicalPlayerId?{canonicalPlayerId:card.dataset.canonicalPlayerId,matchMethod:card.dataset.identityMatchMethod,matchedAt:card.dataset.identityMatchedAt,providerId:card.dataset.identityProviderId,providerPlayerId:card.dataset.identityProviderPlayerId,sourceUpdatedAt:card.dataset.identitySourceUpdatedAt||null}:null;return {id:`slot-${index+1}`,role:card.querySelector(".p-role").value,player:{id,identity,name,position:card.querySelector(".p-position").value,status:card.querySelector(".p-status").value.toUpperCase()},projection:raw===""?null:{playerId:id,projectedFantasyPoints:Number(raw),source:"USER_SUPPLIED"}};});}
 function team(){const name=document.querySelector("#team-name").value.trim();return{id:`${slug(name,"team")}-${Date.now()}`,name,sport,leagueSettings:{name:document.querySelector("#league-name").value.trim()||"My League",sport,starterPositions:defaults,scoringLabel:sport==="SOCCER"?"User-supplied projected points":"User-supplied projected fantasy points"},roster:roster()};}
 function review(){document.querySelector("#review-list").innerHTML=roster().map(x=>`<div><strong>${escapeHtml(x.player.name||"Unnamed player")}</strong><span>${x.player.position} · ${x.role==="STARTER"?"Starter":"Bench"}</span></div>`).join("");}
 function componentLabel(key){return key.replace(/([A-Z])/g," $1").replace(/^./,x=>x.toUpperCase());}
@@ -90,7 +158,23 @@ function extractionProjection(player) {
     source: "VISIBLE_SCREENSHOT_TEXT"
   };
 }
-function applyRosterExtraction(extraction) {
+async function resolvePlayerIdentities(extraction) {
+  const response=await fetch("/api/sports-hub/player-identities/resolve",{
+    method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({
+      sport,
+      players:extraction.players.map(player=>({
+        name:player.name,
+        position:player.position
+      }))
+    })
+  });
+  const body=await response.json();
+  if(!response.ok)throw new Error(body.error||"Player matching is temporarily unavailable.");
+  return body;
+}
+function applyRosterExtraction(extraction,identityResolution=null,identityWarning=null) {
   if (extraction.teamName) {
     document.querySelector("#team-name").value=extraction.teamName;
   }
@@ -98,8 +182,11 @@ function applyRosterExtraction(extraction) {
     document.querySelector("#league-name").value=extraction.leagueName;
   }
   list.replaceChildren();
-  extraction.players.forEach((player)=>playerCard({
+  extraction.players.forEach((player,index)=>playerCard({
     extractionConfidence:player.confidence,
+    identityProviderUpdatedAt:identityResolution?.provider?.updatedAt,
+    identityResolution:identityResolution?.results?.[index],
+    identityResolvedAt:identityResolution?.resolvedAt,
     player:{
       name:player.name,
       position:player.position,
@@ -116,7 +203,12 @@ function applyRosterExtraction(extraction) {
   const warnings=extraction.warnings.length
     ? `<ul>${extraction.warnings.map(warning=>`<li>${escapeHtml(warning)}</li>`).join("")}</ul>`
     : "";
-  message.innerHTML=`<strong>We found ${extraction.players.length} player${extraction.players.length===1?"":"s"}.</strong><p>Check every name, position, and starter/bench choice before continuing. Blank projections will stay blank.</p>${warnings}`;
+  const identitySummary=identityWarning
+    ? `<p>${escapeHtml(identityWarning)} You can still review and continue with typed names.</p>`
+    : identityResolution
+      ? `<p class="identity-summary">${identityResolution.counts.matched} matched · ${identityResolution.counts.ambiguous} ${identityResolution.counts.ambiguous===1?"needs":"need"} a choice · ${identityResolution.counts.unmatched} unmatched. ${identityResolution.provider.live?"Current player directory connected.":"Sample directory only; no live projections were added."}</p>`
+      : "";
+  message.innerHTML=`<strong>We found ${extraction.players.length} player${extraction.players.length===1?"":"s"}.</strong><p>Check every name, position, and starter/bench choice before continuing. Blank projections will stay blank.</p>${identitySummary}${warnings}`;
   document.querySelector(".step[data-step=\"2\"] h2").after(message);
 }
 async function installRosterScanner() {
@@ -188,7 +280,12 @@ async function installRosterScanner() {
       const body=await response.json();
       if(!response.ok)throw new Error(body.error||"The roster screenshot could not be read.");
       if(!body.extraction.players.length)throw new Error(body.extraction.warnings[0]||"No readable players were found.");
-      applyRosterExtraction(body.extraction);
+      let identityResolution=null;
+      let identityWarning=null;
+      try{
+        identityResolution=await resolvePlayerIdentities(body.extraction);
+      }catch(error){identityWarning=error.message;}
+      applyRosterExtraction(body.extraction,identityResolution,identityWarning);
       selectedDataUrl=null;
       preview.removeAttribute("src");
       input.value="";
