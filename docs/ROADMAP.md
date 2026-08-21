@@ -55,6 +55,12 @@
   freshness, and immutable analysis input snapshots.
 - [x] Add import history/details, snapshot reanalysis, downloadable templates,
   and an accessible import wizard.
+- [x] Make Sports Hub the primary product entry point with separate football,
+  basketball, and soccer portals.
+- [x] Add a guided three-step roster builder, polished consumer results,
+  privacy-safe sharing, and reduced-motion responsive layouts.
+- [x] Extend deterministic Team Score analysis to soccer using only supplied
+  projections, without claiming a universal official soccer scoring system.
 - Add one licensed live provider adapter only after commercial-use permission
   is confirmed.
 - [x] Build read-only roster analysis and lineup recommendations first.
@@ -72,6 +78,5 @@
 ## Immediate next slice
 
 Extend Sports Hub with saved analysis comparison and import-field mapping while
-keeping live provider connections offline. Continue Opportunity Agent stabilization
-with scheduler, comparison, event, snapshot, and notification compatibility
-coverage.
+keeping live provider connections offline. Continue to preserve Opportunity Agent
+and Event Finder compatibility behind their dedicated product entry points.
