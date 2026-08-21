@@ -25,8 +25,12 @@
 - [x] Expose a separate API namespace and responsive dashboard area.
 - [x] Add catalog search, event details, official links, refresh controls, and
   accessible loading, empty, and error states.
-- [ ] Add saved preferences.
-- Add recommendations only after ingestion quality is measurable.
+- [x] Add separately persisted saved-event snapshots and validated preferences.
+- [x] Add deterministic, explainable recommendations without AI or API keys.
+- [x] Report ingestion quality, coverage, rejected rows, deduplication, and
+  catalog freshness.
+- [x] Add Discover, Recommended, and Saved dashboard views plus preferences.
+- [ ] Add ingestion history and measurable source-quality trends.
 
 ## Phase 3 — Sports & Fantasy Hub MVP
 
@@ -47,6 +51,6 @@
 
 ## Immediate next slice
 
-Measure NYC Parks ingestion quality and add saved Event Finder preferences.
-In parallel, add unit coverage around watch CRUD validation without mutating
-the real `config/watches.json`, then add API compatibility tests.
+Record ingestion-quality history and add saved-event calendar export. In
+parallel, add unit coverage around watch CRUD validation without mutating the
+real `config/watches.json`, then add API compatibility tests.
