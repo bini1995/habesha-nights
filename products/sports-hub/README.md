@@ -85,3 +85,29 @@ Every imported analysis includes source, projection date, scoring period,
 analysis version, import version, content and snapshot checksums,
 completeness/confidence, and a warning when projections are over seven days
 old. The FREE/PREMIUM response boundary remains unchanged.
+
+## Phase 3E roster screenshots
+
+Every football, basketball, and soccer builder offers an optional roster
+screenshot path when `OPENAI_API_KEY` is configured. The browser accepts PNG,
+JPEG, and WebP files up to 6 MB and shows a local preview plus a required
+disclosure before sending the image to the OpenAI Responses API. The default
+model is configurable through `OPENAI_VISION_MODEL`.
+
+The vision service uses image input, strict structured output, `store: false`,
+file-signature validation, a request timeout, and a small per-IP rate limit.
+It extracts only text visibly present in the image and leaves unclear
+positions, lineup roles, and projections unresolved. Raw images and raw model
+responses are not persisted.
+
+The extracted roster is a preview, never a saved team. Users must review and
+correct every player card before the existing team-validation and analysis
+flow can persist anything. Missing projections remain missing and lower Team
+Score completeness.
+
+Endpoints under `/api/sports-hub`:
+
+- `GET /roster-images/status` reports whether scanning is configured plus
+  supported image types and the upload limit.
+- `POST /roster-images/parse` requires `{ consent: true, sport,
+  imageDataUrl }` and returns a versioned extraction preview.

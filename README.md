@@ -12,6 +12,7 @@ available as Labs products with their existing APIs, persistence, and URLs.
 
 - Phone-first guided lineup builder and offline sample teams
 - Football, basketball, and soccer support
+- Consent-based roster screenshot extraction with a required review step
 - Explainable 0–100 Team Score with completeness and confidence
 - Two complete free recommendations with premium details removed server-side
 - Advanced user-provided CSV and JSON imports
@@ -113,3 +114,10 @@ handled independently by deployment routing when a process is disabled. See
 Copy `.env.example` to `.env` for local configuration. Never commit
 `.env` or API keys. Rotate any credential that may previously have been
 shared outside the local environment.
+
+Roster screenshot extraction is optional. Set `OPENAI_API_KEY` to enable it;
+`OPENAI_VISION_MODEL` defaults to `gpt-5.4-mini`. The browser accepts PNG,
+JPEG, and WebP images up to 6 MB. Sports Hub sends an image to OpenAI only
+after the user checks the disclosure, requests `store: false`, never saves the
+raw image, and requires the user to review extracted players before a team can
+be submitted. AI extraction may misread cropped or unclear screenshots.

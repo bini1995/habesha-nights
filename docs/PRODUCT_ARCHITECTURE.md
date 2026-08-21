@@ -11,8 +11,15 @@ logic directly.
 
 The root experience and primary brand. It owns fantasy sport models, local
 teams, imports, analysis snapshots, Team Score, recommendations, entitlements,
-and the football, basketball, and soccer interfaces. `/sports-hub/` remains a
-compatibility URL while `/` serves the same landing experience directly.
+the consent-based roster image extraction boundary, and the football,
+basketball, and soccer interfaces. `/sports-hub/` remains a compatibility URL
+while `/` serves the same landing experience directly.
+
+Roster images are transient AI inputs. The browser requires a user disclosure,
+the server validates type, size, and file signature, and the Responses API call
+uses `store: false`. Sports Hub persists neither the image nor the unconfirmed
+extraction. Only a roster that the user reviews and submits may enter normal
+team persistence. The OpenAI credential remains server-side.
 
 ### Opportunity Agent (Labs)
 

@@ -69,6 +69,10 @@
   league names, session-scoped drafts, and incomplete-analysis language.
 - [x] Add explicit configuration boundaries for future sports-only deployments
   without changing default AMC or Event Finder behavior.
+- [x] Add consent-based PNG, JPEG, and WebP roster screenshot extraction with
+  strict structured output, transient image handling, and editable previews.
+- [x] Require confirmation and normal domain validation before an extracted
+  roster can be persisted or analyzed.
 - Add one licensed live provider adapter only after commercial-use permission
   is confirmed.
 - [x] Build read-only roster analysis and lineup recommendations first.
@@ -85,6 +89,7 @@
 
 ## Immediate next slice
 
-Extend Sports Hub with saved analysis comparison and import-field mapping while
-keeping live provider connections offline. Continue to preserve Opportunity Agent
-and Event Finder compatibility behind their dedicated product entry points.
+Add player identity resolution and a licensed projection/injury data source so
+screenshot names can be matched to current players without inventing data.
+Then add saved analysis comparison while continuing to preserve Opportunity
+Agent and Event Finder compatibility behind their dedicated product entry points.
