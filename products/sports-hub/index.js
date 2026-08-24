@@ -25,6 +25,10 @@ const {
   createPlayerIdentityService
 } = require("./services/player-identity-service");
 const {
+  PlayerDataCapabilityError,
+  createPlayerDataPreviewService
+} = require("./services/player-data-preview-service");
+const {
   RosterImageConfigurationError,
   RosterImageUpstreamError,
   RosterImageValidationError,
@@ -42,6 +46,7 @@ function createSportsHubRouter({
   analysisStore = createAnalysisStore(),
   rosterImageParser = createRosterImageParser(),
   playerIdentityService = createPlayerIdentityService(),
+  playerDataPreviewService = createPlayerDataPreviewService(),
   now = () => new Date()
 } = {}) {
   const router = express.Router();
@@ -78,6 +83,7 @@ function createSportsHubRouter({
         "ANALYSIS_PROVENANCE",
         "ROSTER_IMAGE_EXTRACTION",
         "PLAYER_IDENTITY_RESOLUTION",
+        "READ_ONLY_PLAYER_DATA_PREVIEW",
         "LIVE_PLAYER_DATA_PROVIDER_BOUNDARY"
       ]
     });
@@ -138,6 +144,10 @@ function createSportsHubRouter({
         error: error.message
       });
     }
+  });
+
+  router.get("/player-data/status", (request, response) => {
+    response.json(playerDataPreviewService.status());
   });
 
   router.post("/roster-images/parse", async (request, response) => {
@@ -229,6 +239,19 @@ function createSportsHubRouter({
       response.json({ team });
     } catch (error) {
       response.status(500).json({ error: error.message });
+    }
+  });
+
+  router.post("/teams/:teamId/player-data/preview", async (request, response) => {
+    try {
+      const team = await teamStore.get(request.params.teamId);
+      if (!team) return response.status(404).json({ error: "Team not found." });
+      response.json(await playerDataPreviewService.previewTeam(team));
+    } catch (error) {
+      if (error instanceof PlayerDataCapabilityError) {
+        return response.status(409).json({ error: error.message });
+      }
+      response.status(400).json({ error: error.message });
     }
   });
 

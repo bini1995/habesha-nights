@@ -5,7 +5,10 @@
     "name": "Sports Hub fictional sample directory",
     "mode": "OFFLINE_SAMPLE",
     "live": false,
+    "fixtureOnly": true,
+    "licenseStatus": "NOT_APPLICABLE_FICTIONAL",
     "updatedAt": "2026-08-21T00:00:00.000Z",
+    "sports": ["FOOTBALL", "BASKETBALL", "SOCCER"],
     "capabilities": ["PLAYER_DIRECTORY"]
   },
   "players": [

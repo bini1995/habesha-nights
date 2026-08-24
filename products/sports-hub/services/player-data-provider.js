@@ -12,11 +12,14 @@ class PlayerDataProvider {
   constructor(metadata) {
     this.metadata = Object.freeze({
       capabilities: Object.freeze([...(metadata.capabilities ?? [])]),
+      fixtureOnly: Boolean(metadata.fixtureOnly),
       id: metadata.id,
+      licenseStatus: metadata.licenseStatus ?? null,
       live: Boolean(metadata.live),
       mode: metadata.mode,
       name: metadata.name,
       providerVersion: PLAYER_DATA_PROVIDER_VERSION,
+      sports: Object.freeze([...(metadata.sports ?? [])]),
       updatedAt: metadata.updatedAt ?? null
     });
   }
@@ -62,6 +65,12 @@ function createPlayerDataProvider({
   const normalized = String(name).trim().toLowerCase();
   if (normalized === "offline-sample") {
     return new OfflineSamplePlayerDataProvider();
+  }
+  if (normalized === "sportsdataio-football-fixture") {
+    const {
+      SportsDataIOFootballFixtureProvider
+    } = require("./sportsdataio-football-fixture-provider");
+    return new SportsDataIOFootballFixtureProvider();
   }
   throw new Error(`Unsupported sports data provider: "${name}".`);
 }
