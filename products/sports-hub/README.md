@@ -139,3 +139,32 @@ Identity endpoints under `/api/sports-hub`:
 
 See the [sports data provider evaluation](../../docs/SPORTS_DATA_PROVIDER_EVALUATION.md)
 for the live-data decision gate.
+
+## Phase 3F.2 football player-data preview
+
+Sports Hub includes a read-only football adapter backed by fictional,
+SportsDataIO-shaped fixture data. It proves the provider contract for stable
+IDs, projections, injuries, schedules, freshness, rejected-row isolation, and
+source attribution without making a network request or claiming that the data
+is live. Roster status and injury designation remain separate fields.
+
+The default `SPORTS_DATA_PROVIDER` remains `offline-sample`, which intentionally
+lacks projections, injuries, and schedules. Developers may explicitly select
+`sportsdataio-football-fixture` to exercise the complete offline contract. The
+unqualified `sportsdataio-football` provider name is unsupported and stays
+disabled until commercial rights, caching, retention, and display terms are
+approved.
+
+Player-data endpoints under `/api/sports-hub`:
+
+- `GET /player-data/status` reports provider capabilities, fixture/live state,
+  license state, supported sports, and whether previews are ready.
+- `POST /teams/:teamId/player-data/preview` compares a saved football roster
+  with provider-shaped projections, injury reports, and games. The response is
+  marked `previewOnly`, `persisted: false`, and `canApply: false`; it never
+  changes the saved team or runs paid recommendations.
+
+Invalid, duplicate, malformed, and cross-sport fixture rows are rejected
+individually. Every projection retains its scoring period, season, provider
+player ID, source update time, and deterministic freshness result. Stale and
+missing data are surfaced as plain-language warnings rather than silently used.

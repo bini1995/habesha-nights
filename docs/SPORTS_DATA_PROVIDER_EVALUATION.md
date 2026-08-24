@@ -23,6 +23,12 @@ licensed for commercial redistribution and does not include soccer, and live
 commercial access requires a sales agreement. Those constraints must be
 resolved before showing real provider data to users.
 
+Phase 3F.2 now includes a strictly offline, fictional
+`sportsdataio-football-fixture` adapter. It follows a representative provider
+shape but contains no real player feed and makes no SportsDataIO network calls.
+It is an engineering contract test, not a live integration, license grant, or
+commercial-use approval. The default provider remains `offline-sample`.
+
 ## Commercial questions that must be answered
 
 1. Does the license permit consumer display in a paid fantasy-advice product?
@@ -55,9 +61,16 @@ A live adapter is not ready until it:
 ## Recommended rollout
 
 1. Obtain a development key and written answers to the commercial questions.
-2. Build a read-only football player-directory adapter using scrambled fixtures.
-3. Add football projections and injury mapping with freshness reporting.
-4. Compare provider projections against the existing deterministic Team Score;
+2. [Complete] Build a read-only football player-directory adapter using only
+   fictional offline fixtures.
+3. [Complete] Add football projection, injury, and schedule mapping with
+   freshness reporting and invalid-row isolation.
+4. [Complete] Add a non-persisting comparison preview beside saved roster
+   projections. Provider values remain separate and never silently replace user
+   inputs.
+5. After steps 1 and the licensing review are complete, add a disabled-by-default
+   network client with timeouts, bounded retries, and safe rate-limit errors.
+6. Compare approved provider projections against the deterministic Team Score;
    provider data remains an input, never the score itself.
-5. Repeat the contract for basketball and then selected soccer competitions.
-6. Enable saved weekly comparisons before adding paid recommendations.
+7. Repeat the contract for basketball and then selected soccer competitions.
+8. Enable saved weekly comparisons before adding paid recommendations.

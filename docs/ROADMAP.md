@@ -79,6 +79,10 @@
   when a user edits the matched name or position.
 - [x] Add a provider-neutral capability boundary for player directories,
   projections, injuries, and schedules with a fictional offline adapter.
+- [x] Add a fictional SportsDataIO-shaped football adapter with stable IDs,
+  projections, injuries, schedules, freshness, and isolated invalid rows.
+- [x] Add a non-persisting saved-team player-data preview that keeps provider
+  facts separate from user inputs and recommendations.
 - Add one licensed live provider adapter only after commercial-use permission
   is confirmed.
 - [x] Build read-only roster analysis and lineup recommendations first.
@@ -95,9 +99,10 @@
 
 ## Immediate next slice
 
-Evaluate a SportsDataIO development integration against the provider contract,
-using only scrambled trial fixtures until commercial display and derived-score
-rights are confirmed. Map stable player IDs, projections, injuries, schedules,
-freshness, and source attribution for one sport first. Do not expose a live-data
-feature flag until licensing, caching, and redistribution terms are documented.
-Then add saved analysis comparison while preserving the Labs products.
+Obtain written commercial-display and derived-score rights plus a development
+key before adding a real football network client. After that gate, implement it
+disabled by default with timeouts, bounded retries, rate-limit handling, safe
+errors, cache rules, and contract parity with the offline fixture. Until that
+approval arrives, proceed with saved weekly analysis comparisons and a mobile
+history view using only user-supplied or clearly fictional data. Preserve the
+Labs products and the existing free/premium recommendation boundary.
