@@ -35,6 +35,8 @@ test("Sports Hub interface assets are served with browser-safe content types", a
     ["/sports-hub/soccer/", /^text\/html/, /Fantasy Soccer/],
     ["/sports-hub/history/", /^text\/html/, /See what changed/],
     ["/sports-hub/history/history.js", /^(text|application)\/javascript/, /projectionTotalDelta/],
+    ["/sports-hub/leagues/", /^text\/html/, /Play together/],
+    ["/sports-hub/leagues/leagues.js", /^(text|application)\/javascript/, /submitScore/],
     ["/sports-hub/import/", /^text\/html/, /Preview import/],
     ["/sports-hub/consumer.css", /^text\/css/, /prefers-reduced-motion/],
     ["/sports-hub/portal.js", /^(text|application)\/javascript/, /save-check-in/],

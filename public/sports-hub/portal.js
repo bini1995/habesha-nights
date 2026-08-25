@@ -1,4 +1,15 @@
 "use strict";
+const sportSwitcher = document.querySelector(".sport-switcher");
+if (sportSwitcher && !sportSwitcher.querySelector(".nav-leagues")) {
+  const leaguesLink = document.createElement("a");
+  leaguesLink.className = "nav-leagues";
+  leaguesLink.href = "/sports-hub/leagues/";
+  leaguesLink.textContent = "Leagues";
+  sportSwitcher.insertBefore(
+    leaguesLink,
+    sportSwitcher.querySelector(".nav-analyze")
+  );
+}
 const sport = document.body.dataset.sport;
 const positions = { FOOTBALL: ["QB","RB","WR","TE","K","DST","FLEX"], BASKETBALL: ["PG","SG","SF","PF","C","G","F","UTIL"], SOCCER: ["GK","DEF","MID","FWD"] }[sport];
 const defaults = { FOOTBALL: ["QB","RB","WR","TE"], BASKETBALL: ["PG","SG","SF","PF","C"], SOCCER: ["GK","DEF","MID","FWD"] }[sport];

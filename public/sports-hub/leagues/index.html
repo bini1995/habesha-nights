@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="Create a private fantasy mini-league, invite friends, record official fantasy points, and follow simple standings.">
+  <title>Mini-leagues · Sports Hub</title>
+  <link rel="stylesheet" href="/sports-hub/consumer.css">
+</head>
+<body class="portal league-page">
+  <nav class="topbar" aria-label="Sports navigation">
+    <a class="wordmark" href="/">SPORTS HUB</a>
+    <div class="sport-switcher">
+      <a href="/sports-hub/football/">Football</a>
+      <a href="/sports-hub/basketball/">Basketball</a>
+      <a href="/sports-hub/soccer/">Soccer</a>
+      <a class="nav-progress" href="/sports-hub/history/">Progress</a>
+      <a class="nav-leagues" aria-current="page" href="/sports-hub/leagues/">Leagues</a>
+      <a class="nav-analyze" href="/sports-hub/football/">Analyze</a>
+    </div>
+  </nav>
+  <main class="leagues-main">
+    <div id="league-hub">
+      <header class="league-hero">
+        <p class="kicker">Private mini-leagues</p>
+        <h1>Play together.<br><em>Keep scoring honest.</em></h1>
+        <p>Create a small league, invite friends with a private code, and enter the official fantasy points from the platform where you play.</p>
+      </header>
+
+      <aside class="local-league-note" aria-label="Local MVP notice">
+        <strong>Local MVP</strong>
+        <span>No accounts yet. Leagues live on this device, and the private code is for joining—not account security.</span>
+      </aside>
+
+      <section class="my-leagues" aria-labelledby="my-leagues-title">
+        <div class="league-section-head">
+          <div>
+            <p class="kicker">Your leagues</p>
+            <h2 id="my-leagues-title">Jump back in</h2>
+          </div>
+          <span id="league-count" class="count-pill">0 leagues</span>
+        </div>
+        <p id="league-status" class="league-status" role="status" aria-live="polite">Loading your leagues…</p>
+        <div id="league-list" class="league-list"></div>
+        <div id="league-empty" class="league-empty" hidden>
+          <div class="empty-badge" aria-hidden="true">01</div>
+          <div>
+            <h3>Your first league starts here.</h3>
+            <p>Create one for your group, or enter a code from a friend.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="league-actions" aria-label="Create or join a mini-league">
+        <form id="create-league" class="league-form">
+          <p class="form-number">01 · Start a league</p>
+          <h2>Bring your group together.</h2>
+          <label>League name
+            <input id="create-name" name="name" maxlength="80" placeholder="Sunday crew" required>
+          </label>
+          <div class="league-form-row">
+            <label>Sport
+              <select id="create-sport" name="sport">
+                <option value="FOOTBALL">Football</option>
+                <option value="BASKETBALL">Basketball</option>
+                <option value="SOCCER">Soccer</option>
+              </select>
+            </label>
+            <label>Scoring periods
+              <select id="create-periods" name="scoringPeriodCount">
+                <option value="4">4</option>
+                <option value="8">8</option>
+                <option value="14" selected>14</option>
+              </select>
+            </label>
+          </div>
+          <label>Your display name
+            <input id="create-owner" name="ownerName" maxlength="50" autocomplete="nickname" placeholder="Avery" required>
+          </label>
+          <label>Your saved team <small>Optional</small>
+            <select id="create-team" name="teamId"></select>
+          </label>
+          <button class="primary league-submit" type="submit">Create private league</button>
+          <p id="create-status" class="form-status" role="status" aria-live="polite"></p>
+        </form>
+
+        <form id="join-league" class="league-form join-form">
+          <p class="form-number">02 · Join friends</p>
+          <h2>Got a private code?</h2>
+          <label>League code
+            <input id="join-code" class="join-code-input" name="joinCode" maxlength="10" autocapitalize="characters" autocomplete="off" placeholder="ABCD2345" required>
+          </label>
+          <label>Your display name
+            <input id="join-manager" name="managerName" maxlength="50" autocomplete="nickname" placeholder="Jordan" required>
+          </label>
+          <label>Your saved team <small>Optional; sport must match</small>
+            <select id="join-team" name="teamId"></select>
+          </label>
+          <button class="primary league-submit" type="submit">Join league</button>
+          <p id="join-status" class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </div>
+
+    <section id="league-home" class="league-home" hidden>
+      <button id="back-to-leagues" class="quiet back-button" type="button">← All leagues</button>
+      <aside id="invite-panel" class="invite-panel" hidden>
+        <div>
+          <p class="kicker">Shown once</p>
+          <h2>Invite your people.</h2>
+          <p>Keep this code private. Save it now—it cannot be viewed again.</p>
+        </div>
+        <div class="code-copy">
+          <strong id="invite-code"></strong>
+          <button id="copy-code" class="primary" type="button">Copy code</button>
+        </div>
+        <p id="copy-status" class="form-status" role="status" aria-live="polite"></p>
+      </aside>
+
+      <header class="league-home-hero">
+        <div>
+          <p id="league-sport" class="kicker"></p>
+          <h1 id="league-name"></h1>
+          <p id="league-meta"></p>
+        </div>
+        <span id="league-state" class="league-state"></span>
+      </header>
+
+      <aside class="score-truth">
+        <strong>What counts here</strong>
+        <p>Standings use the official fantasy point totals you enter below. Team Score is advice about roster quality; it never changes wins or losses.</p>
+        <div>
+          <span>Official points <b>On</b></span>
+          <span>Team Score <b>Advice only</b></span>
+          <span>Manager / AI score <b>Not calculated</b></span>
+        </div>
+      </aside>
+
+      <div class="league-dashboard">
+        <section class="standings-panel" aria-labelledby="standings-title">
+          <div class="league-section-head compact-head">
+            <div>
+              <p class="kicker">Leaderboard</p>
+              <h2 id="standings-title">Standings</h2>
+            </div>
+            <span id="completed-count" class="count-pill"></span>
+          </div>
+          <div class="standings-labels" aria-hidden="true">
+            <span>Manager</span><span>W-L-T</span><span>PF</span><span>Diff</span>
+          </div>
+          <div id="standings-list" class="standings-list"></div>
+        </section>
+
+        <section class="members-panel" aria-labelledby="members-title">
+          <div class="league-section-head compact-head">
+            <div>
+              <p class="kicker">The group</p>
+              <h2 id="members-title">Managers</h2>
+            </div>
+            <span id="member-count" class="count-pill"></span>
+          </div>
+          <div id="member-list" class="member-list"></div>
+        </section>
+      </div>
+
+      <section class="matchups-panel" aria-labelledby="matchups-title">
+        <div class="matchup-heading">
+          <div>
+            <p class="kicker">Head to head</p>
+            <h2 id="matchups-title">Matchups</h2>
+          </div>
+          <label>Scoring period
+            <select id="period-select"></select>
+          </label>
+        </div>
+        <p id="score-status" class="league-status" role="status" aria-live="polite"></p>
+        <div id="matchup-list" class="matchup-list"></div>
+      </section>
+    </section>
+  </main>
+  <footer>
+    <p>Results depend on the official point totals entered by your group. Sports Hub does not guarantee fantasy outcomes.</p>
+  </footer>
+  <script src="/sports-hub/leagues/leagues.js"></script>
+</body>
+</html>

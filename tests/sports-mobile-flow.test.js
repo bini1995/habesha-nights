@@ -10,6 +10,7 @@ const { createTeamStore } = require("../products/sports-hub/services/team-store"
 const { createImportStore } = require("../products/sports-hub/services/import-store");
 const { createAnalysisStore } = require("../products/sports-hub/services/analysis-store");
 const { createCheckInStore } = require("../products/sports-hub/services/check-in-store");
+const { createMiniLeagueStore } = require("../products/sports-hub/services/mini-league-store");
 
 async function testServer({ playerIdentityService, rosterImageParser } = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "sports-mobile-"));
@@ -22,6 +23,7 @@ async function testServer({ playerIdentityService, rosterImageParser } = {}) {
     importStore: createImportStore({ file: path.join(directory, "imports.json") }),
     analysisStore: createAnalysisStore({ file: path.join(directory, "analyses.json") }),
     checkInStore: createCheckInStore({ file: path.join(directory, "check-ins.json") }),
+    miniLeagueStore: createMiniLeagueStore({ file: path.join(directory, "mini-leagues.json") }),
     playerIdentityService,
     rosterImageParser
   }));
@@ -91,6 +93,59 @@ test("390px results save a check-in and open the team progress timeline", async 
     await page.getByRole("heading", { name: "See what changed." }).waitFor();
     await page.getByText("Latest Team Score").waitFor();
     assert.match(await page.locator("#history-summary").innerText(), /First check-in/i);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true
+    );
+    await page.close();
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => runtime.server.close(resolve));
+    await fs.rm(runtime.directory, { recursive: true, force: true });
+  }
+});
+
+test("390px mini-league flow creates, joins, records a result, and updates standings", async () => {
+  const runtime = await testServer();
+  let browser;
+  try {
+    const football = require("../products/sports-hub/fixtures/football-team.json");
+    await runtime.teamStore.save(football);
+    await runtime.teamStore.save({
+      ...football,
+      id: "mobile-rivals",
+      name: "Mobile Rivals"
+    });
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(`${runtime.base}/sports-hub/leagues/`);
+    await page.getByRole("heading", { name: "Play together." }).waitFor();
+
+    const createForm = page.locator("#create-league");
+    await createForm.getByLabel("League name").fill("Sunday Crew");
+    await createForm.getByLabel("Your display name").fill("Avery");
+    await createForm.getByLabel("Your saved team Optional").selectOption(football.id);
+    await createForm.getByRole("button", { name: "Create private league" }).click();
+    await page.getByRole("heading", { name: "Invite your people." }).waitFor();
+    const code = await page.locator("#invite-code").innerText();
+    assert.match(code, /^[A-HJ-NP-Z2-9]{8}$/);
+
+    await page.getByRole("button", { name: "All leagues" }).click();
+    const joinForm = page.locator("#join-league");
+    await joinForm.getByLabel("League code").fill(code);
+    await joinForm.getByLabel("Your display name").fill("Blake");
+    await joinForm.getByLabel(/Your saved team/).selectOption("mobile-rivals");
+    await joinForm.getByRole("button", { name: "Join league" }).click();
+    await page.getByText("2 managers · 14 scoring periods").waitFor();
+
+    const matchup = page.locator(".matchup-card").first();
+    await matchup.locator('input[name="homePoints"]').fill("121.5");
+    await matchup.locator('input[name="awayPoints"]').fill("116.25");
+    await matchup.getByRole("button", { name: "Record result" }).click();
+    await page.getByText("Result recorded. Standings updated.").waitFor();
+    await page.getByText("Scoring started").waitFor();
+    assert.match(await page.locator(".standings-list").innerText(), /1-0-0/);
+    assert.match(await page.locator(".score-truth").innerText(), /never changes wins or losses/i);
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       true
