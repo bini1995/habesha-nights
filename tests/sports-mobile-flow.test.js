@@ -27,6 +27,14 @@ async function testServer({ playerIdentityService, rosterImageParser } = {}) {
     playerIdentityService,
     rosterImageParser
   }));
+  app.get("/vendor/supabase.js", (request, response) => response.sendFile(
+    path.join(
+      path.dirname(require.resolve("@supabase/supabase-js/package.json")),
+      "dist",
+      "umd",
+      "supabase.js"
+    )
+  ));
   app.get("/", (request, response) => response.sendFile(path.join(__dirname, "..", "public", "sports-hub", "index.html")));
   app.use(express.static(path.join(__dirname, "..", "public")));
   const server = await new Promise((resolve) => { const listener = app.listen(0, "127.0.0.1", () => resolve(listener)); });
@@ -77,6 +85,28 @@ test("root metadata and mobile navigation present Sports Hub first with legacy t
   assert.match(html, /aria-label="Sports navigation"/);
   assert.match(html, /<summary>Labs & more<\/summary>/);
   assert.doesNotMatch(html.match(/<nav class="topbar"[\s\S]*?<\/nav>/)[0], /Opportunity Agent|Event Finder/);
+});
+
+test("390px account page explains local mode without exposing a broken login", async () => {
+  const runtime = await testServer();
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(`${runtime.base}/sports-hub/account/`);
+    await page.getByRole("heading", { name: "Local Sports Hub is ready." }).waitFor();
+    assert.equal(await page.locator("#account-signin").isHidden(), true);
+    assert.equal(await page.getByRole("link", { name: "Use local leagues" }).isVisible(), true);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true
+    );
+    await page.close();
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => runtime.server.close(resolve));
+    await fs.rm(runtime.directory, { recursive: true, force: true });
+  }
 });
 
 test("390px results save a check-in and open the team progress timeline", async () => {
