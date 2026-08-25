@@ -4,7 +4,8 @@ Sports Hub is the primary product interface at `/`, with `/sports-hub/` kept as
 a compatibility URL. It offers separate,
 indexable football, basketball, and soccer Team Analyzer portals plus an advanced
 CSV/JSON import workflow at `/sports-hub/import/`. Private local mini-leagues
-live at `/sports-hub/leagues/`.
+live at `/sports-hub/leagues/`, and the opt-in hosted account entry point lives
+at `/sports-hub/account/`.
 
 The guided builder asks for team basics, players, and a final review. Results show
 a deterministic 0–100 Team Score, grade, component breakdown, completeness,
@@ -33,8 +34,10 @@ authorization is required to approve or reject proposals, record or correct
 totals directly, rotate access, and lock or unlock a completed scoring period.
 Corrections and proposal decisions preserve audit receipts. Team Score never
 affects a win, loss, tie, points-for total, or rank. Manager Score and AI ranking
-remain uncalculated. This local MVP has no accounts, public invitations,
-payments, or automatic roster actions.
+remain uncalculated. Local leagues still have no cross-device identity, public
+invitations, payments, or automatic roster actions. Phase 3K adds email login
+and server identity verification, but it does not claim hosted league syncing
+until the staging database is connected.
 
 ## What the numbers mean
 
@@ -66,6 +69,19 @@ never written to the store. Successfully entered access keys are kept in
 browser `sessionStorage` only, so they remain local conveniences rather than
 hosted account sessions. Commissioner-authorized migration downloads explicitly
 exclude every access hash and require new hosted access to be issued.
+
+Hosted account configuration is a separate provider boundary. With no Supabase
+settings, `/sports-hub/account/` explains that local mode remains active and
+does not show a broken login form. With `SUPABASE_URL` and a new publishable key,
+the page supports email links or codes and the server validates access tokens
+with the Auth provider before returning a minimal user identity. The server
+does not authorize from the browser's cached session object.
+
+The tracked Supabase migration defines seven normalized tables plus owner/member
+helper policies and atomic create, join, propose, and proposal-resolution
+functions. Anonymous table access is revoked and every table has Row Level
+Security. The schema is activation-ready, not evidence that a remote project
+has already been provisioned.
 
 When image extraction is configured, users may upload a roster screenshot and
 review the visible names before saving. A separate deterministic identity step

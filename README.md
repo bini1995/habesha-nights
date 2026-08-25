@@ -18,6 +18,8 @@ available as Labs products with their existing APIs, persistence, and URLs.
 - Two complete free recommendations with premium details removed server-side
 - Advanced user-provided CSV and JSON imports
 - Privacy-safe share summaries and cards
+- Account-ready email-code sign-in at `/sports-hub/account/`
+- Versioned Supabase/Postgres schema with league Row Level Security policies
 
 Open <http://localhost:3000> or the compatible `/sports-hub/` URL.
 
@@ -128,3 +130,10 @@ directory. It can match exact names and aliases, surface likely typo matches,
 and require a choice when multiple players share a name. It does not provide
 live projections, injuries, or schedules. Those capabilities remain behind the
 provider contract until a commercial data license is approved.
+
+Hosted account sign-in remains disabled until `SUPABASE_URL` and a new
+`SUPABASE_PUBLISHABLE_KEY` are configured. Local teams and mini-leagues continue
+working when those settings are absent. See
+[the hosted beta setup](docs/HOSTED_BETA_SETUP.md). Do not configure a
+`SUPABASE_SECRET_KEY` until a server-only administrative feature explicitly
+needs it.

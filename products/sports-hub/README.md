@@ -278,4 +278,35 @@ hosted phase must connect per-user authentication, Row Level Security, and
 transactional storage before public invite links or payments. There are no
 automatic roster changes or live provider claims. See
 [`docs/HOSTED_BETA_SETUP.md`](../../docs/HOSTED_BETA_SETUP.md) for the owner
-setup required to continue.
+setup checklist.
+
+## Phase 3K hosted account foundation
+
+The phone-first account screen at `/sports-hub/account/` stays in an honest
+local-mode state until `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are set.
+Once configured, it supports Supabase email magic links and one-time codes. The
+browser may retain the provider session, but Sports Hub calls Supabase from the
+server to verify the access token before returning a minimal user identity.
+
+Account endpoints under `/api/sports-hub`:
+
+- `GET /auth/status` reports whether hosted authentication is configured,
+  without returning any key.
+- `GET /auth/config` returns only the browser-safe project URL and publishable
+  key when configured.
+- `GET /auth/me` requires an `Authorization: Bearer` token and verifies it with
+  Supabase before returning ID, normalized email, display name, and email
+  verification state.
+
+The tracked `supabase/migrations/20260825000000_sports_hub_accounts.sql`
+migration creates normalized hosted profiles, leagues, memberships, invite
+digests, matchups, score proposals, and events. Anonymous grants are revoked,
+all seven tables enable Row Level Security, and security-definer database
+functions explicitly check authenticated ownership or matchup participation
+for league creation, joining, score proposals, and approvals. Raw friend codes
+are not stored.
+
+This is an activation-ready boundary, not a claim that accounts or hosted
+league syncing are live. The JSON-backed league experience remains unchanged
+until the staging project is configured, the migration and pgTAP contract pass,
+and owner/member/stranger behavior is verified across two devices.

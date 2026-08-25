@@ -59,6 +59,16 @@ session keys are not an authentication system.
 Public sharing and multi-device hosting remain disabled until hosted identity,
 ownership, recovery, and transactional storage are connected and tested.
 
+Phase 3K introduces `HostedAuthProvider` as a separate Supabase boundary. Its
+public configuration contains only the project URL and publishable key; token
+identity is independently verified server-side. The account interface remains
+in local mode when these values are absent. A tracked Postgres migration models
+hosted profiles, leagues, memberships, owner-only invite digests, matchups,
+score proposals, and audit events. Database functions make create/join and
+proposal decisions atomic, while Row Level Security and explicit grants provide
+defense in depth. The existing JSON league store remains active until staging
+deployment and two-device authorization tests pass.
+
 ### Opportunity Agent (Labs)
 
 The existing production application. It owns watches, monitoring providers,

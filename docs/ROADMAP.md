@@ -105,6 +105,14 @@
 - [x] Add commissioner/member key rotation, proposal decisions, proposal audit
   receipts, and a downloadable migration bundle with all secrets removed.
 - [x] Migrate version 1.1 leagues into explicit member-access reissue state.
+- [x] Add opt-in Supabase email authentication configuration with a dedicated
+  phone-first account page and server-verified user identity endpoint.
+- [x] Add a versioned hosted league schema for profiles, memberships, private
+  invite digests, matchups, score proposals, and audit events.
+- [x] Enable Row Level Security on every hosted table, remove anonymous table
+  grants, and add checked create, join, propose, and approve database functions.
+- [x] Add offline provider tests, migration-contract tests, and a pgTAP policy
+  contract without claiming the remote migration has been deployed.
 - Keep AI advice explainable and require confirmation for roster changes.
 
 ## Phase 4 — AI scoring and ranking
@@ -117,13 +125,13 @@
 
 ## Immediate next slice
 
-Connect Supabase Auth and Postgres in a staging environment after the project
-owner supplies the project URL and API keys through local environment settings.
-Map authenticated users to owner/member roles with Row Level Security, import
-the secret-free local migration bundle while reissuing access, add recovery and
-rate limits, and run authorization tests across two devices. Preserve offline
-local mode and do not add payments until those hosted ownership, security,
-privacy, and recovery paths pass.
+Create and link the Supabase staging project, apply the tracked migration, and
+add `SUPABASE_URL` plus the publishable key through local environment settings.
+Then connect the existing mini-league service to user-scoped hosted storage,
+import the secret-free local migration bundle while reissuing access, add
+recovery and rate limits, and run authorization tests across two real devices.
+Preserve offline local mode and do not add payments until those hosted
+ownership, security, privacy, and recovery paths pass.
 
 In parallel, obtain written commercial-display and derived-score rights plus a
 development key before adding a real football network client. That client must
