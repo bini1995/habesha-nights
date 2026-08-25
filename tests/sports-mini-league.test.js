@@ -21,8 +21,12 @@ const { createMiniLeagueStore } = require("../products/sports-hub/services/mini-
 const {
   MiniLeagueConflictError,
   MiniLeagueValidationError,
+  LeagueAuthorizationError,
   createMiniLeagueService
 } = require("../products/sports-hub/services/mini-league-service");
+const {
+  createLocalLeagueAccessProvider
+} = require("../products/sports-hub/services/league-access-provider");
 const { createTeamStore } = require("../products/sports-hub/services/team-store");
 
 const NOW = "2026-08-24T18:00:00.000Z";
@@ -77,10 +81,12 @@ async function withServer(router, run) {
   }
 }
 
-async function requestJson(url, method = "GET", body) {
+async function requestJson(url, method = "GET", body, headers = {}) {
   const response = await fetch(url, {
     method,
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
+    headers: body === undefined
+      ? headers
+      : { "content-type": "application/json", ...headers },
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   return { response, body: await response.json() };
@@ -153,7 +159,10 @@ test("mini-league service hashes invite codes, validates teams, and locks member
     teamStore,
     now: () => new Date(NOW),
     createId: (kind) => `${kind}-${++id}`,
-    createJoinCode: () => "PLAY2Q26"
+    createJoinCode: () => "PLAY2Q26",
+    leagueAccessProvider: createLocalLeagueAccessProvider({
+      createKey: () => "commissioner_key_abcdefghijklmnopqrstuvwxyz"
+    })
   });
 
   try {
@@ -168,9 +177,14 @@ test("mini-league service hashes invite codes, validates teams, and locks member
       teamId: football.id
     });
     assert.equal(created.joinCode, "PLAY2Q26");
+    assert.equal(
+      created.commissionerKey,
+      "commissioner_key_abcdefghijklmnopqrstuvwxyz"
+    );
     assert.equal("joinCodeHash" in created.league, false);
     const persisted = await fs.readFile(file, "utf8");
     assert.equal(persisted.includes("PLAY2Q26"), false);
+    assert.equal(persisted.includes(created.commissionerKey), false);
     assert.match(persisted, /joinCodeHash/);
 
     await assert.rejects(
@@ -204,7 +218,8 @@ test("mini-league service hashes invite codes, validates teams, and locks member
       leagueId: afterConcurrentJoins.id,
       matchupId: afterConcurrentJoins.matchups[0].id,
       homePoints: 122.75,
-      awayPoints: 118.5
+      awayPoints: 118.5,
+      commissionerKey: created.commissionerKey
     });
     assert.equal(scored.completedMatchupCount, 1);
     assert.equal(scored.standings[0].wins, 1);
@@ -245,10 +260,38 @@ test("mini-league APIs create, join, list, retrieve, and replace official result
       });
       assert.equal(created.response.status, 201);
       assert.match(created.body.joinCode, /^[A-HJ-NP-Z2-9]{8}$/);
+      assert.match(created.body.commissionerKey, /^[A-Za-z0-9_-]{32,128}$/);
       assert.equal("joinCodeHash" in created.body.league, false);
 
-      const joined = await requestJson(`${base}/mini-leagues/join`, "POST", {
+      const capability = await requestJson(`${base}/mini-leagues/status`);
+      assert.equal(capability.response.status, 200);
+      assert.equal(capability.body.authorization.authenticatedAccounts, false);
+      assert.equal(capability.body.storage.migrationReady, true);
+
+      const deniedVerify = await requestJson(
+        `${base}/mini-leagues/${created.body.league.id}/commissioner/verify`,
+        "POST",
+        {},
+        { "x-mini-league-commissioner-key": "wrong_commissioner_key_abcdefghijklmnopqrstuvwxyz" }
+      );
+      assert.equal(deniedVerify.response.status, 403);
+      const rotated = await requestJson(
+        `${base}/mini-leagues/${created.body.league.id}/join-code/rotate`,
+        "POST",
+        {},
+        { "x-mini-league-commissioner-key": created.body.commissionerKey }
+      );
+      assert.equal(rotated.response.status, 200);
+      assert.notEqual(rotated.body.joinCode, created.body.joinCode);
+
+      const oldCode = await requestJson(`${base}/mini-leagues/join`, "POST", {
         joinCode: created.body.joinCode,
+        managerName: "Old Code"
+      });
+      assert.equal(oldCode.response.status, 404);
+
+      const joined = await requestJson(`${base}/mini-leagues/join`, "POST", {
+        joinCode: rotated.body.joinCode,
         managerName: "Blake",
         teamId: "api-rivals"
       });
@@ -256,34 +299,223 @@ test("mini-league APIs create, join, list, retrieve, and replace official result
       assert.equal(joined.body.league.members.length, 2);
 
       const matchup = joined.body.league.matchups[0];
-      const scored = await requestJson(
+      const unauthorized = await requestJson(
         `${base}/mini-leagues/${joined.body.league.id}/matchups/${matchup.id}/score`,
         "PUT",
         { homePoints: 88.5, awayPoints: 88.5 }
       );
+      assert.equal(unauthorized.response.status, 403);
+      const scored = await requestJson(
+        `${base}/mini-leagues/${joined.body.league.id}/matchups/${matchup.id}/score`,
+        "PUT",
+        { homePoints: 88.5, awayPoints: 88.5 },
+        { "x-mini-league-commissioner-key": created.body.commissionerKey }
+      );
       assert.equal(scored.response.status, 200);
       assert.equal(scored.body.league.standings[0].ties, 1);
+
+      const locked = await requestJson(
+        `${base}/mini-leagues/${joined.body.league.id}/scoring-periods/1/lock`,
+        "PUT",
+        { locked: true },
+        { "x-mini-league-commissioner-key": created.body.commissionerKey }
+      );
+      assert.equal(locked.response.status, 200);
+      assert.deepEqual(locked.body.league.lockedScoringPeriods, [1]);
+
+      const blockedCorrection = await requestJson(
+        `${base}/mini-leagues/${joined.body.league.id}/matchups/${matchup.id}/score`,
+        "PUT",
+        { homePoints: 99, awayPoints: 88.5 },
+        { "x-mini-league-commissioner-key": created.body.commissionerKey }
+      );
+      assert.equal(blockedCorrection.response.status, 409);
+
+      const unlocked = await requestJson(
+        `${base}/mini-leagues/${joined.body.league.id}/scoring-periods/1/lock`,
+        "PUT",
+        { locked: false },
+        { "x-mini-league-commissioner-key": created.body.commissionerKey }
+      );
+      assert.equal(unlocked.response.status, 200);
 
       const replaced = await requestJson(
         `${base}/mini-leagues/${joined.body.league.id}/matchups/${matchup.id}/score`,
         "PUT",
-        { homePoints: 99, awayPoints: 88.5 }
+        { homePoints: 99, awayPoints: 88.5 },
+        { "x-mini-league-commissioner-key": created.body.commissionerKey }
       );
       assert.equal(replaced.response.status, 200);
       assert.equal(replaced.body.league.standings[0].wins, 1);
+      assert.equal(replaced.body.league.auditTrail.at(-1).type, "RESULT_CORRECTED");
 
       const listed = await requestJson(`${base}/mini-leagues`);
       assert.equal(listed.response.status, 200);
       assert.equal(listed.body.count, 1);
       assert.equal(JSON.stringify(listed.body).includes("joinCodeHash"), false);
+      assert.equal(JSON.stringify(listed.body).includes("commissionerKeyHash"), false);
+      assert.equal(JSON.stringify(listed.body).includes(created.body.commissionerKey), false);
 
       const invalid = await requestJson(
         `${base}/mini-leagues/${joined.body.league.id}/matchups/${matchup.id}/score`,
         "PUT",
-        { homePoints: -1, awayPoints: 2 }
+        { homePoints: -1, awayPoints: 2 },
+        { "x-mini-league-commissioner-key": created.body.commissionerKey }
       );
       assert.equal(invalid.response.status, 400);
     });
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("commissioner access protects rotation, scoring, period locks, and audit history", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "sports-league-access-"));
+  const miniLeagueStore = createMiniLeagueStore({
+    file: path.join(directory, "mini-leagues.json")
+  });
+  const teamStore = createTeamStore({ file: path.join(directory, "teams.json") });
+  const codes = ["PLAY2Q26", "NEXT2Q26"];
+  let id = 0;
+  const commissionerKey = "commissioner_key_abcdefghijklmnopqrstuvwxyz";
+  const service = createMiniLeagueService({
+    miniLeagueStore,
+    teamStore,
+    now: () => new Date(NOW),
+    createId: (kind) => `${kind}-${++id}`,
+    createJoinCode: () => codes.shift(),
+    leagueAccessProvider: createLocalLeagueAccessProvider({
+      createKey: () => commissionerKey
+    })
+  });
+
+  try {
+    const created = await service.create({
+      name: "Commissioner Test",
+      ownerName: "Avery",
+      scoringPeriodCount: 3,
+      sport: "FOOTBALL"
+    });
+    await assert.rejects(
+      service.verifyCommissioner({
+        leagueId: created.league.id,
+        commissionerKey: "wrong_commissioner_key_abcdefghijklmnopqrstuvwxyz"
+      }),
+      LeagueAuthorizationError
+    );
+    assert.equal((await service.verifyCommissioner({
+      leagueId: created.league.id,
+      commissionerKey
+    })).authorized, true);
+
+    const rotated = await service.rotateJoinCode({
+      leagueId: created.league.id,
+      commissionerKey
+    });
+    assert.equal(rotated.joinCode, "NEXT2Q26");
+    await assert.rejects(
+      service.join({ joinCode: "PLAY2Q26", managerName: "Old Code" }),
+      /League code not found/
+    );
+    const joined = await service.join({
+      joinCode: rotated.joinCode,
+      managerName: "Blake"
+    });
+    const matchup = joined.matchups[0];
+    const scored = await service.recordScore({
+      leagueId: joined.id,
+      matchupId: matchup.id,
+      homePoints: 111,
+      awayPoints: 104,
+      commissionerKey
+    });
+    assert.equal(scored.auditTrail.at(-1).type, "RESULT_RECORDED");
+    const locked = await service.setScoringPeriodLock({
+      leagueId: joined.id,
+      scoringPeriod: 1,
+      locked: true,
+      commissionerKey
+    });
+    assert.deepEqual(locked.lockedScoringPeriods, [1]);
+    await assert.rejects(
+      service.recordScore({
+        leagueId: joined.id,
+        matchupId: matchup.id,
+        homePoints: 112,
+        awayPoints: 104,
+        commissionerKey
+      }),
+      MiniLeagueConflictError
+    );
+    await service.setScoringPeriodLock({
+      leagueId: joined.id,
+      scoringPeriod: 1,
+      locked: false,
+      commissionerKey
+    });
+    const corrected = await service.recordScore({
+      leagueId: joined.id,
+      matchupId: matchup.id,
+      homePoints: 112,
+      awayPoints: 104,
+      commissionerKey
+    });
+    assert.deepEqual(corrected.auditTrail.map((event) => event.type), [
+      "JOIN_CODE_ROTATED",
+      "RESULT_RECORDED",
+      "SCORING_PERIOD_LOCKED",
+      "SCORING_PERIOD_UNLOCKED",
+      "RESULT_CORRECTED"
+    ]);
+    assert.deepEqual(corrected.auditTrail.at(-1).previousResult, {
+      homePoints: 111,
+      awayPoints: 104
+    });
+    assert.equal("commissionerKeyHash" in corrected, false);
+    assert.equal("joinCodeHash" in corrected, false);
+    assert.equal(service.status().storage.migrationReady, true);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("version 1.0 leagues migrate safely and commissioner access can be claimed once", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "sports-league-migration-"));
+  const file = path.join(directory, "mini-leagues.json");
+  const legacy = {
+    ...baseLeague(),
+    schemaVersion: "sports-hub-mini-league/1.0"
+  };
+  await fs.writeFile(file, `${JSON.stringify({
+    version: 1,
+    profiles: { default: [legacy] }
+  }, null, 2)}\n`);
+  const miniLeagueStore = createMiniLeagueStore({ file });
+  const commissionerKey = "claimed_commissioner_key_abcdefghijklmnopq";
+  const service = createMiniLeagueService({
+    miniLeagueStore,
+    teamStore: createTeamStore({ file: path.join(directory, "teams.json") }),
+    now: () => new Date(NOW),
+    createId: (kind) => `${kind}-claimed`,
+    leagueAccessProvider: createLocalLeagueAccessProvider({
+      createKey: () => commissionerKey
+    })
+  });
+
+  try {
+    const migrated = await miniLeagueStore.get(legacy.id);
+    assert.equal(migrated.schemaVersion, MINI_LEAGUE_SCHEMA_VERSION);
+    assert.equal(migrated.authorizationMode, "LEGACY_UNCLAIMED");
+    assert.equal(migrated.commissionerKeyHash, null);
+    const claimed = await service.claimCommissioner(legacy.id);
+    assert.equal(claimed.commissionerKey, commissionerKey);
+    assert.equal(claimed.league.commissionerAccessConfigured, true);
+    assert.equal(claimed.league.auditTrail[0].type, "COMMISSIONER_ACCESS_CLAIMED");
+    assert.equal((await fs.readFile(file, "utf8")).includes(commissionerKey), false);
+    await assert.rejects(
+      service.claimCommissioner(legacy.id),
+      MiniLeagueConflictError
+    );
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }

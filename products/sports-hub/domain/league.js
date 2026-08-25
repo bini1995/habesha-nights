@@ -7,10 +7,24 @@ const {
   getScoringRules
 } = require("./scoring");
 
-const MINI_LEAGUE_SCHEMA_VERSION = "sports-hub-mini-league/1.0";
+const MINI_LEAGUE_SCHEMA_VERSION = "sports-hub-mini-league/1.1";
+const PREVIOUS_MINI_LEAGUE_SCHEMA_VERSION = "sports-hub-mini-league/1.0";
 const MINI_LEAGUE_SCORING_SOURCE = "MANUAL_OFFICIAL_FANTASY_POINTS";
 const MAX_LEAGUE_MEMBERS = 12;
 const MAX_SCORING_PERIODS = 30;
+const MAX_LEAGUE_AUDIT_EVENTS = 500;
+const MINI_LEAGUE_AUTHORIZATION_MODES = Object.freeze([
+  "COMMISSIONER_KEY",
+  "LEGACY_UNCLAIMED"
+]);
+const MINI_LEAGUE_AUDIT_EVENT_TYPES = Object.freeze([
+  "COMMISSIONER_ACCESS_CLAIMED",
+  "JOIN_CODE_ROTATED",
+  "RESULT_RECORDED",
+  "RESULT_CORRECTED",
+  "SCORING_PERIOD_LOCKED",
+  "SCORING_PERIOD_UNLOCKED"
+]);
 
 function requireText(value, field) {
   if (typeof value !== "string" || value.trim() === "") {
@@ -151,6 +165,63 @@ function normalizeOfficialPoints(value, field) {
     throw new Error(`${field} must be between 0 and 10000.`);
   }
   return Math.round((points + Number.EPSILON) * 100) / 100;
+}
+
+function normalizeResultSnapshot(value, field) {
+  if (value === null || value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${field} must be an object.`);
+  }
+  const homePoints = normalizeOfficialPoints(value.homePoints, `${field}.homePoints`);
+  const awayPoints = normalizeOfficialPoints(value.awayPoints, `${field}.awayPoints`);
+  if (homePoints === null || awayPoints === null) {
+    throw new Error(`${field} requires both point totals.`);
+  }
+  return { homePoints, awayPoints };
+}
+
+function normalizeAuditEvent(event, index) {
+  if (!event || typeof event !== "object" || Array.isArray(event)) {
+    throw new Error(`auditTrail[${index}] must be an object.`);
+  }
+  const type = requireBoundedText(event.type, `auditTrail[${index}].type`, 50)
+    .toUpperCase();
+  if (!MINI_LEAGUE_AUDIT_EVENT_TYPES.includes(type)) {
+    throw new Error(`auditTrail[${index}].type is not supported.`);
+  }
+  const scoringPeriod = event.scoringPeriod === null ||
+    event.scoringPeriod === undefined
+    ? null
+    : Number(event.scoringPeriod);
+  if (scoringPeriod !== null &&
+      (!Number.isInteger(scoringPeriod) || scoringPeriod < 1 ||
+       scoringPeriod > MAX_SCORING_PERIODS)) {
+    throw new Error(`auditTrail[${index}].scoringPeriod is invalid.`);
+  }
+  return {
+    id: requireBoundedText(event.id, `auditTrail[${index}].id`),
+    type,
+    occurredAt: requireIsoDate(
+      event.occurredAt,
+      `auditTrail[${index}].occurredAt`
+    ),
+    actorMemberId: requireBoundedText(
+      event.actorMemberId,
+      `auditTrail[${index}].actorMemberId`
+    ),
+    scoringPeriod,
+    matchupId: event.matchupId
+      ? requireBoundedText(event.matchupId, `auditTrail[${index}].matchupId`)
+      : null,
+    previousResult: normalizeResultSnapshot(
+      event.previousResult,
+      `auditTrail[${index}].previousResult`
+    ),
+    nextResult: normalizeResultSnapshot(
+      event.nextResult,
+      `auditTrail[${index}].nextResult`
+    )
+  };
 }
 
 function normalizeMatchup(matchup, index) {
@@ -310,6 +381,49 @@ function createMiniLeague(input) {
 
   const createdAt = requireIsoDate(input.createdAt, "createdAt");
   const updatedAt = requireIsoDate(input.updatedAt, "updatedAt");
+  const authorizationMode = String(
+    input.authorizationMode ??
+    (input.commissionerKeyHash ? "COMMISSIONER_KEY" : "LEGACY_UNCLAIMED")
+  ).trim().toUpperCase();
+  if (!MINI_LEAGUE_AUTHORIZATION_MODES.includes(authorizationMode)) {
+    throw new Error("authorizationMode is not supported.");
+  }
+  const commissionerKeyHash = input.commissionerKeyHash
+    ? requireBoundedText(input.commissionerKeyHash, "commissionerKeyHash", 128)
+    : null;
+  if ((authorizationMode === "COMMISSIONER_KEY") !== Boolean(commissionerKeyHash)) {
+    throw new Error("COMMISSIONER_KEY authorization requires a key hash.");
+  }
+  const lockedScoringPeriods = Array.isArray(input.lockedScoringPeriods)
+    ? input.lockedScoringPeriods.map((period, index) => {
+      const normalized = Number(period);
+      if (!Number.isInteger(normalized) || normalized < 1 ||
+          normalized > scoringPeriodCount) {
+        throw new Error(`lockedScoringPeriods[${index}] is invalid.`);
+      }
+      return normalized;
+    })
+    : [];
+  if (new Set(lockedScoringPeriods).size !== lockedScoringPeriods.length) {
+    throw new Error("lockedScoringPeriods must be unique.");
+  }
+  const auditTrail = Array.isArray(input.auditTrail)
+    ? input.auditTrail.map(normalizeAuditEvent)
+    : [];
+  if (auditTrail.length > MAX_LEAGUE_AUDIT_EVENTS) {
+    throw new Error(
+      `auditTrail may contain at most ${MAX_LEAGUE_AUDIT_EVENTS} events.`
+    );
+  }
+  if (new Set(auditTrail.map((event) => event.id)).size !== auditTrail.length) {
+    throw new Error("Audit event IDs must be unique.");
+  }
+  if (auditTrail.some((event) =>
+    !memberIds.includes(event.actorMemberId) ||
+    (event.scoringPeriod !== null && event.scoringPeriod > scoringPeriodCount) ||
+    (event.matchupId !== null && !matchupIds.includes(event.matchupId)))) {
+    throw new Error("Audit events must reference this league's members and schedule.");
+  }
   return deepFreeze({
     schemaVersion: MINI_LEAGUE_SCHEMA_VERSION,
     id: requireBoundedText(input.id, "id"),
@@ -320,8 +434,11 @@ function createMiniLeague(input) {
       ? "IN_PROGRESS"
       : "OPEN",
     ownerMemberId,
+    authorizationMode,
+    commissionerKeyHash,
     joinCodeHash: requireBoundedText(input.joinCodeHash, "joinCodeHash", 128),
     scoringPeriodCount,
+    lockedScoringPeriods: [...lockedScoringPeriods].sort((a, b) => a - b),
     scoringSource: MINI_LEAGUE_SCORING_SOURCE,
     teamScoreAffectsStandings: false,
     managerScore: null,
@@ -329,9 +446,30 @@ function createMiniLeague(input) {
     members,
     memberships,
     matchups,
+    auditTrail,
     createdAt,
     updatedAt
   });
+}
+
+function migrateMiniLeague(input) {
+  if (!input || typeof input !== "object") {
+    throw new Error("Mini-league data is required.");
+  }
+  if (input.schemaVersion === MINI_LEAGUE_SCHEMA_VERSION) {
+    return createMiniLeague(input);
+  }
+  if (input.schemaVersion === PREVIOUS_MINI_LEAGUE_SCHEMA_VERSION ||
+      input.schemaVersion === undefined) {
+    return createMiniLeague({
+      ...input,
+      authorizationMode: "LEGACY_UNCLAIMED",
+      commissionerKeyHash: null,
+      lockedScoringPeriods: [],
+      auditTrail: []
+    });
+  }
+  throw new Error(`Unsupported mini-league schema: ${input.schemaVersion}.`);
 }
 
 function calculateStandings(league) {
@@ -392,12 +530,17 @@ function calculateStandings(league) {
 
 module.exports = {
   MAX_LEAGUE_MEMBERS,
+  MAX_LEAGUE_AUDIT_EVENTS,
   MAX_SCORING_PERIODS,
+  MINI_LEAGUE_AUDIT_EVENT_TYPES,
+  MINI_LEAGUE_AUTHORIZATION_MODES,
   MINI_LEAGUE_SCHEMA_VERSION,
   MINI_LEAGUE_SCORING_SOURCE,
+  PREVIOUS_MINI_LEAGUE_SCHEMA_VERSION,
   buildRoundRobinSchedule,
   calculateStandings,
   createLeague,
   createMiniLeague,
+  migrateMiniLeague,
   normalizeOfficialPoints
 };

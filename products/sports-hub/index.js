@@ -31,6 +31,7 @@ const {
   MiniLeagueConflictError,
   MiniLeagueNotFoundError,
   MiniLeagueValidationError,
+  LeagueAuthorizationError,
   createMiniLeagueService
 } = require("./services/mini-league-service");
 const {
@@ -110,6 +111,11 @@ function createSportsHubRouter({
         "LOCAL_MINI_LEAGUES",
         "DETERMINISTIC_MATCHUPS",
         "OFFICIAL_POINT_STANDINGS",
+        "COMMISSIONER_AUTHORIZATION",
+        "JOIN_CODE_ROTATION",
+        "SCORING_PERIOD_LOCKS",
+        "RESULT_AUDIT_TRAIL",
+        "HOSTED_LEAGUE_STORAGE_BOUNDARY",
         "ROSTER_IMAGE_EXTRACTION",
         "PLAYER_IDENTITY_RESOLUTION",
         "READ_ONLY_PLAYER_DATA_PREVIEW",
@@ -159,8 +165,19 @@ function createSportsHubRouter({
     if (error instanceof MiniLeagueConflictError) {
       return response.status(409).json({ error: error.message });
     }
+    if (error instanceof LeagueAuthorizationError) {
+      return response.status(403).json({ error: error.message });
+    }
     return response.status(500).json({ error: "Mini-league request failed." });
   }
+
+  function commissionerKey(request) {
+    return request.get("x-mini-league-commissioner-key");
+  }
+
+  router.get("/mini-leagues/status", (request, response) => {
+    response.json(miniLeagueService.status());
+  });
 
   router.get("/mini-leagues", async (request, response) => {
     try {
@@ -189,6 +206,53 @@ function createSportsHubRouter({
     }
   });
 
+  router.post("/mini-leagues/:leagueId/commissioner/verify", async (request, response) => {
+    try {
+      response.json(await miniLeagueService.verifyCommissioner({
+        leagueId: request.params.leagueId,
+        commissionerKey: commissionerKey(request)
+      }));
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.post("/mini-leagues/:leagueId/commissioner/claim", async (request, response) => {
+    try {
+      response.status(201).json(
+        await miniLeagueService.claimCommissioner(request.params.leagueId)
+      );
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.post("/mini-leagues/:leagueId/join-code/rotate", async (request, response) => {
+    try {
+      response.json(await miniLeagueService.rotateJoinCode({
+        leagueId: request.params.leagueId,
+        commissionerKey: commissionerKey(request)
+      }));
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.put("/mini-leagues/:leagueId/scoring-periods/:scoringPeriod/lock", async (request, response) => {
+    try {
+      response.json({
+        league: await miniLeagueService.setScoringPeriodLock({
+          leagueId: request.params.leagueId,
+          scoringPeriod: request.params.scoringPeriod,
+          locked: request.body?.locked,
+          commissionerKey: commissionerKey(request)
+        })
+      });
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
   router.get("/mini-leagues/:leagueId", async (request, response) => {
     try {
       response.json({
@@ -206,7 +270,8 @@ function createSportsHubRouter({
           leagueId: request.params.leagueId,
           matchupId: request.params.matchupId,
           homePoints: request.body?.homePoints,
-          awayPoints: request.body?.awayPoints
+          awayPoints: request.body?.awayPoints,
+          commissionerKey: commissionerKey(request)
         })
       });
     } catch (error) {

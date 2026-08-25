@@ -1,6 +1,7 @@
 const path = require("path");
 const { createAtomicJsonStore } = require("./atomic-json-store");
 const { DEFAULT_PROFILE_ID } = require("./team-store");
+const { migrateMiniLeague } = require("../domain/league");
 
 const DEFAULT_MINI_LEAGUES_FILE = path.join(
   __dirname,
@@ -22,6 +23,7 @@ function createMiniLeagueStore({ file = DEFAULT_MINI_LEAGUES_FILE } = {}) {
   async function list(profileId = DEFAULT_PROFILE_ID) {
     const data = await store.load();
     return [...(data.profiles?.[profileId] ?? [])]
+      .map(migrateMiniLeague)
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }
 
@@ -52,7 +54,18 @@ function createMiniLeagueStore({ file = DEFAULT_MINI_LEAGUES_FILE } = {}) {
     return league;
   }
 
-  return { findByJoinCodeHash, get, list, save };
+  function status() {
+    return Object.freeze({
+      id: "atomic-json-local",
+      version: 1,
+      durability: "LOCAL_SINGLE_DEVICE",
+      hosted: false,
+      transactionalAudit: true,
+      migrationReady: true
+    });
+  }
+
+  return { findByJoinCodeHash, get, list, save, status };
 }
 
 module.exports = {
