@@ -7,23 +7,40 @@ const {
   getScoringRules
 } = require("./scoring");
 
-const MINI_LEAGUE_SCHEMA_VERSION = "sports-hub-mini-league/1.1";
-const PREVIOUS_MINI_LEAGUE_SCHEMA_VERSION = "sports-hub-mini-league/1.0";
+const MINI_LEAGUE_SCHEMA_VERSION = "sports-hub-mini-league/1.2";
+const PREVIOUS_MINI_LEAGUE_SCHEMA_VERSION = "sports-hub-mini-league/1.1";
+const LEGACY_MINI_LEAGUE_SCHEMA_VERSION = "sports-hub-mini-league/1.0";
 const MINI_LEAGUE_SCORING_SOURCE = "MANUAL_OFFICIAL_FANTASY_POINTS";
 const MAX_LEAGUE_MEMBERS = 12;
 const MAX_SCORING_PERIODS = 30;
 const MAX_LEAGUE_AUDIT_EVENTS = 500;
+const MAX_SCORE_PROPOSALS = 200;
 const MINI_LEAGUE_AUTHORIZATION_MODES = Object.freeze([
   "COMMISSIONER_KEY",
   "LEGACY_UNCLAIMED"
 ]);
 const MINI_LEAGUE_AUDIT_EVENT_TYPES = Object.freeze([
   "COMMISSIONER_ACCESS_CLAIMED",
+  "COMMISSIONER_KEY_ROTATED",
   "JOIN_CODE_ROTATED",
+  "MEMBER_ACCESS_ROTATED",
   "RESULT_RECORDED",
   "RESULT_CORRECTED",
+  "SCORE_PROPOSED",
+  "SCORE_PROPOSAL_APPROVED",
+  "SCORE_PROPOSAL_REJECTED",
   "SCORING_PERIOD_LOCKED",
   "SCORING_PERIOD_UNLOCKED"
+]);
+const MEMBER_ACCESS_MODES = Object.freeze([
+  "MEMBER_KEY",
+  "LEGACY_UNCLAIMED"
+]);
+const SCORE_PROPOSAL_STATUSES = Object.freeze([
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "SUPERSEDED"
 ]);
 
 function requireText(value, field) {
@@ -158,6 +175,36 @@ function normalizeMembership(membership, index) {
   };
 }
 
+function normalizeMemberAccess(access, index) {
+  if (!access || typeof access !== "object" || Array.isArray(access)) {
+    throw new Error(`memberAccess[${index}] must be an object.`);
+  }
+  const memberKeyHash = access.memberKeyHash
+    ? requireBoundedText(
+      access.memberKeyHash,
+      `memberAccess[${index}].memberKeyHash`,
+      128
+    )
+    : null;
+  const mode = String(
+    access.mode ?? (memberKeyHash ? "MEMBER_KEY" : "LEGACY_UNCLAIMED")
+  ).trim().toUpperCase();
+  if (!MEMBER_ACCESS_MODES.includes(mode)) {
+    throw new Error(`memberAccess[${index}].mode is not supported.`);
+  }
+  if ((mode === "MEMBER_KEY") !== Boolean(memberKeyHash)) {
+    throw new Error("MEMBER_KEY access requires a key hash.");
+  }
+  return {
+    memberId: requireBoundedText(
+      access.memberId,
+      `memberAccess[${index}].memberId`
+    ),
+    mode,
+    memberKeyHash
+  };
+}
+
 function normalizeOfficialPoints(value, field) {
   if (value === null || value === undefined || value === "") return null;
   const points = Number(value);
@@ -178,6 +225,59 @@ function normalizeResultSnapshot(value, field) {
     throw new Error(`${field} requires both point totals.`);
   }
   return { homePoints, awayPoints };
+}
+
+function normalizeScoreProposal(proposal, index) {
+  if (!proposal || typeof proposal !== "object" || Array.isArray(proposal)) {
+    throw new Error(`scoreProposals[${index}] must be an object.`);
+  }
+  const status = requireBoundedText(
+    proposal.status,
+    `scoreProposals[${index}].status`,
+    20
+  ).toUpperCase();
+  if (!SCORE_PROPOSAL_STATUSES.includes(status)) {
+    throw new Error(`scoreProposals[${index}].status is not supported.`);
+  }
+  const result = normalizeResultSnapshot(
+    proposal,
+    `scoreProposals[${index}]`
+  );
+  const resolvedAt = proposal.resolvedAt
+    ? requireIsoDate(proposal.resolvedAt, `scoreProposals[${index}].resolvedAt`)
+    : null;
+  const resolvedByMemberId = proposal.resolvedByMemberId
+    ? requireBoundedText(
+      proposal.resolvedByMemberId,
+      `scoreProposals[${index}].resolvedByMemberId`
+    )
+    : null;
+  if ((status === "PENDING") !== (resolvedAt === null)) {
+    throw new Error(`scoreProposals[${index}] has an invalid resolution time.`);
+  }
+  if ((status === "PENDING") !== (resolvedByMemberId === null)) {
+    throw new Error(`scoreProposals[${index}] has an invalid resolver.`);
+  }
+  return {
+    id: requireBoundedText(proposal.id, `scoreProposals[${index}].id`),
+    matchupId: requireBoundedText(
+      proposal.matchupId,
+      `scoreProposals[${index}].matchupId`
+    ),
+    proposedByMemberId: requireBoundedText(
+      proposal.proposedByMemberId,
+      `scoreProposals[${index}].proposedByMemberId`
+    ),
+    homePoints: result.homePoints,
+    awayPoints: result.awayPoints,
+    status,
+    createdAt: requireIsoDate(
+      proposal.createdAt,
+      `scoreProposals[${index}].createdAt`
+    ),
+    resolvedAt,
+    resolvedByMemberId
+  };
 }
 
 function normalizeAuditEvent(event, index) {
@@ -209,9 +309,18 @@ function normalizeAuditEvent(event, index) {
       event.actorMemberId,
       `auditTrail[${index}].actorMemberId`
     ),
+    targetMemberId: event.targetMemberId
+      ? requireBoundedText(
+        event.targetMemberId,
+        `auditTrail[${index}].targetMemberId`
+      )
+      : null,
     scoringPeriod,
     matchupId: event.matchupId
       ? requireBoundedText(event.matchupId, `auditTrail[${index}].matchupId`)
+      : null,
+    proposalId: event.proposalId
+      ? requireBoundedText(event.proposalId, `auditTrail[${index}].proposalId`)
       : null,
     previousResult: normalizeResultSnapshot(
       event.previousResult,
@@ -361,6 +470,26 @@ function createMiniLeague(input) {
     throw new Error("A saved team may belong to only one manager in a league.");
   }
 
+  const memberAccess = Array.isArray(input.memberAccess)
+    ? input.memberAccess.map(normalizeMemberAccess)
+    : members.map((member) => ({
+      memberId: member.id,
+      mode: "LEGACY_UNCLAIMED",
+      memberKeyHash: null
+    }));
+  if (memberAccess.length !== members.length ||
+      new Set(memberAccess.map((access) => access.memberId)).size !==
+        members.length ||
+      memberAccess.some((access) => !memberIds.includes(access.memberId))) {
+    throw new Error("Each member requires exactly one access record.");
+  }
+  const memberKeyHashes = memberAccess
+    .map((access) => access.memberKeyHash)
+    .filter(Boolean);
+  if (new Set(memberKeyHashes).size !== memberKeyHashes.length) {
+    throw new Error("Member access keys must be unique within a league.");
+  }
+
   const scoringPeriodCount = normalizeScoringPeriodCount(
     input.scoringPeriodCount
   );
@@ -377,6 +506,31 @@ function createMiniLeague(input) {
     !memberIds.includes(matchup.homeMemberId) ||
     !memberIds.includes(matchup.awayMemberId))) {
     throw new Error("Each matchup must reference two league members and a valid period.");
+  }
+
+  const scoreProposals = Array.isArray(input.scoreProposals)
+    ? input.scoreProposals.map(normalizeScoreProposal)
+    : [];
+  if (scoreProposals.length > MAX_SCORE_PROPOSALS) {
+    throw new Error(
+      `scoreProposals may contain at most ${MAX_SCORE_PROPOSALS} entries.`
+    );
+  }
+  const proposalIds = scoreProposals.map((proposal) => proposal.id);
+  if (new Set(proposalIds).size !== proposalIds.length) {
+    throw new Error("Score proposal IDs must be unique.");
+  }
+  if (scoreProposals.some((proposal) => {
+    const matchup = matchups.find((item) => item.id === proposal.matchupId);
+    return !matchup ||
+      ![matchup.homeMemberId, matchup.awayMemberId]
+        .includes(proposal.proposedByMemberId) ||
+      (proposal.resolvedByMemberId !== null &&
+       proposal.resolvedByMemberId !== ownerMemberId);
+  })) {
+    throw new Error(
+      "Score proposals must reference a matchup participant and owner resolution."
+    );
   }
 
   const createdAt = requireIsoDate(input.createdAt, "createdAt");
@@ -420,6 +574,8 @@ function createMiniLeague(input) {
   }
   if (auditTrail.some((event) =>
     !memberIds.includes(event.actorMemberId) ||
+    (event.targetMemberId !== null &&
+     !memberIds.includes(event.targetMemberId)) ||
     (event.scoringPeriod !== null && event.scoringPeriod > scoringPeriodCount) ||
     (event.matchupId !== null && !matchupIds.includes(event.matchupId)))) {
     throw new Error("Audit events must reference this league's members and schedule.");
@@ -445,7 +601,9 @@ function createMiniLeague(input) {
     aiRanking: null,
     members,
     memberships,
+    memberAccess,
     matchups,
+    scoreProposals,
     auditTrail,
     createdAt,
     updatedAt
@@ -459,13 +617,30 @@ function migrateMiniLeague(input) {
   if (input.schemaVersion === MINI_LEAGUE_SCHEMA_VERSION) {
     return createMiniLeague(input);
   }
-  if (input.schemaVersion === PREVIOUS_MINI_LEAGUE_SCHEMA_VERSION ||
+  if (input.schemaVersion === PREVIOUS_MINI_LEAGUE_SCHEMA_VERSION) {
+    return createMiniLeague({
+      ...input,
+      memberAccess: (input.members ?? []).map((member) => ({
+        memberId: member.id,
+        mode: "LEGACY_UNCLAIMED",
+        memberKeyHash: null
+      })),
+      scoreProposals: []
+    });
+  }
+  if (input.schemaVersion === LEGACY_MINI_LEAGUE_SCHEMA_VERSION ||
       input.schemaVersion === undefined) {
     return createMiniLeague({
       ...input,
       authorizationMode: "LEGACY_UNCLAIMED",
       commissionerKeyHash: null,
       lockedScoringPeriods: [],
+      memberAccess: (input.members ?? []).map((member) => ({
+        memberId: member.id,
+        mode: "LEGACY_UNCLAIMED",
+        memberKeyHash: null
+      })),
+      scoreProposals: [],
       auditTrail: []
     });
   }
@@ -529,14 +704,18 @@ function calculateStandings(league) {
 }
 
 module.exports = {
+  LEGACY_MINI_LEAGUE_SCHEMA_VERSION,
   MAX_LEAGUE_MEMBERS,
   MAX_LEAGUE_AUDIT_EVENTS,
+  MAX_SCORE_PROPOSALS,
   MAX_SCORING_PERIODS,
+  MEMBER_ACCESS_MODES,
   MINI_LEAGUE_AUDIT_EVENT_TYPES,
   MINI_LEAGUE_AUTHORIZATION_MODES,
   MINI_LEAGUE_SCHEMA_VERSION,
   MINI_LEAGUE_SCORING_SOURCE,
   PREVIOUS_MINI_LEAGUE_SCHEMA_VERSION,
+  SCORE_PROPOSAL_STATUSES,
   buildRoundRobinSchedule,
   calculateStandings,
   createLeague,

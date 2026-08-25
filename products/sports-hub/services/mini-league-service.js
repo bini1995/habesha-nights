@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const {
   MAX_LEAGUE_AUDIT_EVENTS,
   MAX_LEAGUE_MEMBERS,
+  MAX_SCORE_PROPOSALS,
   buildRoundRobinSchedule,
   calculateStandings,
   createMiniLeague,
@@ -39,11 +40,20 @@ function generateJoinCode() {
 }
 
 function publicLeague(league) {
-  const { commissionerKeyHash, joinCodeHash, ...safe } = league;
+  const {
+    commissionerKeyHash,
+    joinCodeHash,
+    memberAccess,
+    ...safe
+  } = league;
   const standings = calculateStandings(league);
   return {
     ...safe,
     commissionerAccessConfigured: Boolean(commissionerKeyHash),
+    memberAccessStatus: memberAccess.map((access) => ({
+      memberId: access.memberId,
+      configured: Boolean(access.memberKeyHash)
+    })),
     completedMatchupCount: league.matchups.filter((matchup) => matchup.scoredAt).length,
     standings
   };
@@ -122,9 +132,11 @@ function createMiniLeagueService({
       id: createId("audit"),
       type,
       occurredAt: timestamp,
-      actorMemberId: league.ownerMemberId,
+      actorMemberId: details.actorMemberId ?? league.ownerMemberId,
+      targetMemberId: details.targetMemberId ?? null,
       scoringPeriod: details.scoringPeriod ?? null,
       matchupId: details.matchupId ?? null,
+      proposalId: details.proposalId ?? null,
       previousResult: details.previousResult ?? null,
       nextResult: details.nextResult ?? null
     };
@@ -134,6 +146,35 @@ function createMiniLeagueService({
     const league = await miniLeagueStore.get(leagueId, profileId);
     if (!league) throw new MiniLeagueNotFoundError("Mini-league not found.");
     return league;
+  }
+
+  function normalizeScoreInput(homePoints, awayPoints) {
+    let normalizedHome;
+    let normalizedAway;
+    try {
+      normalizedHome = normalizeOfficialPoints(homePoints, "homePoints");
+      normalizedAway = normalizeOfficialPoints(awayPoints, "awayPoints");
+    } catch (error) {
+      throw new MiniLeagueValidationError(error.message);
+    }
+    if (normalizedHome === null || normalizedAway === null) {
+      throw new MiniLeagueValidationError("Enter both official point totals.");
+    }
+    return { homePoints: normalizedHome, awayPoints: normalizedAway };
+  }
+
+  function appendProposal(league, proposal) {
+    const proposals = [...league.scoreProposals, proposal];
+    if (proposals.length <= MAX_SCORE_PROPOSALS) return proposals;
+    const removableIndex = proposals.findIndex((item) =>
+      item.status !== "PENDING");
+    if (removableIndex === -1) {
+      throw new MiniLeagueConflictError(
+        "Resolve an existing score proposal before adding another one."
+      );
+    }
+    proposals.splice(removableIndex, 1);
+    return proposals;
   }
 
   async function create(input, profileId = DEFAULT_PROFILE_ID) {
@@ -147,6 +188,7 @@ function createMiniLeagueService({
       const ownerMemberId = createId("member");
       const joinCode = await uniqueJoinCode(profileId);
       const commissionerKey = leagueAccessProvider.issueCommissionerKey();
+      const memberKey = leagueAccessProvider.issueMemberKey();
       const members = [{
         id: ownerMemberId,
         displayName: ownerName,
@@ -167,17 +209,29 @@ function createMiniLeagueService({
         lockedScoringPeriods: [],
         members,
         memberships: [{ memberId: ownerMemberId, teamId: team?.id ?? null }],
+        memberAccess: [{
+          memberId: ownerMemberId,
+          mode: "MEMBER_KEY",
+          memberKeyHash: leagueAccessProvider.hashMemberKey(memberKey)
+        }],
         matchups: buildRoundRobinSchedule({
           leagueId,
           memberIds: [ownerMemberId],
           scoringPeriodCount: input?.scoringPeriodCount
         }),
+        scoreProposals: [],
         auditTrail: [],
         createdAt: timestamp,
         updatedAt: timestamp
       });
       await miniLeagueStore.save(league, profileId);
-      return { commissionerKey, joinCode, league: publicLeague(league) };
+      return {
+        commissionerKey,
+        joinCode,
+        memberId: ownerMemberId,
+        memberKey,
+        league: publicLeague(league)
+      };
     } catch (error) {
       if (error instanceof MiniLeagueNotFoundError ||
           error instanceof MiniLeagueValidationError) throw error;
@@ -198,9 +252,10 @@ function createMiniLeagueService({
     const codeHash = hashJoinCode(input?.joinCode);
     const existing = await miniLeagueStore.findByJoinCodeHash(codeHash, profileId);
     if (!existing) throw new MiniLeagueNotFoundError("League code not found.");
-    if (existing.matchups.some((matchup) => matchup.scoredAt)) {
+    if (existing.matchups.some((matchup) => matchup.scoredAt) ||
+        existing.scoreProposals.length > 0) {
       throw new MiniLeagueConflictError(
-        "Membership is locked because league scoring has started."
+        "Membership is locked because score reporting has started."
       );
     }
     if (existing.members.length >= MAX_LEAGUE_MEMBERS) {
@@ -218,6 +273,7 @@ function createMiniLeagueService({
     }
     const timestamp = now().toISOString();
     const memberId = createId("member");
+    const memberKey = leagueAccessProvider.issueMemberKey();
     const members = [...existing.members, {
       id: memberId,
       displayName: managerName,
@@ -231,6 +287,14 @@ function createMiniLeagueService({
         ...existing.memberships,
         { memberId, teamId: team?.id ?? null }
       ],
+      memberAccess: [
+        ...existing.memberAccess,
+        {
+          memberId,
+          mode: "MEMBER_KEY",
+          memberKeyHash: leagueAccessProvider.hashMemberKey(memberKey)
+        }
+      ],
       matchups: buildRoundRobinSchedule({
         leagueId: existing.id,
         memberIds: members.map((member) => member.id),
@@ -239,7 +303,11 @@ function createMiniLeagueService({
       updatedAt: timestamp
     });
     await miniLeagueStore.save(league, profileId);
-    return publicLeague(league);
+    return {
+      memberId,
+      memberKey,
+      league: publicLeague(league)
+    };
   }
 
   async function recordScore({ leagueId, matchupId, homePoints, awayPoints, commissionerKey }, profileId = DEFAULT_PROFILE_ID) {
@@ -292,6 +360,15 @@ function createMiniLeagueService({
           scoredAt: timestamp
         }
         : item),
+      scoreProposals: existing.scoreProposals.map((proposal) =>
+        proposal.matchupId === matchupId && proposal.status === "PENDING"
+          ? {
+            ...proposal,
+            status: "SUPERSEDED",
+            resolvedAt: timestamp,
+            resolvedByMemberId: existing.ownerMemberId
+          }
+          : proposal),
       auditTrail: appendAudit(existing, event),
       updatedAt: timestamp
     });
@@ -305,6 +382,20 @@ function createMiniLeagueService({
     return {
       authorized: true,
       ownerMemberId: league.ownerMemberId
+    };
+  }
+
+  async function verifyMember({ leagueId, memberKey }, profileId = DEFAULT_PROFILE_ID) {
+    const league = await requireLeague(leagueId, profileId);
+    const memberId = leagueAccessProvider.assertMember(league, memberKey);
+    const member = league.members.find((item) => item.id === memberId);
+    return {
+      authorized: true,
+      member: {
+        id: member.id,
+        displayName: member.displayName,
+        role: member.role
+      }
     };
   }
 
@@ -335,6 +426,68 @@ function createMiniLeagueService({
     return { commissionerKey, league: publicLeague(league) };
   }
 
+  async function rotateCommissionerKey({ leagueId, commissionerKey }, profileId = DEFAULT_PROFILE_ID) {
+    const existing = await requireLeague(leagueId, profileId);
+    leagueAccessProvider.assertCommissioner(existing, commissionerKey);
+    const replacementKey = leagueAccessProvider.issueCommissionerKey();
+    const replacementHash =
+      leagueAccessProvider.hashCommissionerKey(replacementKey);
+    if (replacementHash === existing.commissionerKeyHash) {
+      throw new MiniLeagueConflictError(
+        "A replacement commissioner key could not be generated. Try again."
+      );
+    }
+    const timestamp = now().toISOString();
+    const event = auditEvent(
+      "COMMISSIONER_KEY_ROTATED",
+      existing,
+      timestamp
+    );
+    const league = createMiniLeague({
+      ...existing,
+      commissionerKeyHash: replacementHash,
+      auditTrail: appendAudit(existing, event),
+      updatedAt: timestamp
+    });
+    await miniLeagueStore.save(league, profileId);
+    return { commissionerKey: replacementKey, league: publicLeague(league) };
+  }
+
+  async function rotateMemberKey({ leagueId, memberId, commissionerKey }, profileId = DEFAULT_PROFILE_ID) {
+    const existing = await requireLeague(leagueId, profileId);
+    leagueAccessProvider.assertCommissioner(existing, commissionerKey);
+    if (!existing.members.some((member) => member.id === memberId)) {
+      throw new MiniLeagueNotFoundError("League member not found.");
+    }
+    const memberKey = leagueAccessProvider.issueMemberKey();
+    const memberKeyHash = leagueAccessProvider.hashMemberKey(memberKey);
+    const current = existing.memberAccess.find((access) =>
+      access.memberId === memberId);
+    if (current.memberKeyHash === memberKeyHash) {
+      throw new MiniLeagueConflictError(
+        "A replacement member key could not be generated. Try again."
+      );
+    }
+    const timestamp = now().toISOString();
+    const event = auditEvent(
+      "MEMBER_ACCESS_ROTATED",
+      existing,
+      timestamp,
+      { targetMemberId: memberId }
+    );
+    const league = createMiniLeague({
+      ...existing,
+      memberAccess: existing.memberAccess.map((access) =>
+        access.memberId === memberId
+          ? { memberId, mode: "MEMBER_KEY", memberKeyHash }
+          : access),
+      auditTrail: appendAudit(existing, event),
+      updatedAt: timestamp
+    });
+    await miniLeagueStore.save(league, profileId);
+    return { memberId, memberKey, league: publicLeague(league) };
+  }
+
   async function rotateJoinCode({ leagueId, commissionerKey }, profileId = DEFAULT_PROFILE_ID) {
     const existing = await requireLeague(leagueId, profileId);
     leagueAccessProvider.assertCommissioner(existing, commissionerKey);
@@ -349,6 +502,146 @@ function createMiniLeagueService({
     });
     await miniLeagueStore.save(league, profileId);
     return { joinCode, league: publicLeague(league) };
+  }
+
+  async function proposeScore({ leagueId, matchupId, homePoints, awayPoints, memberKey }, profileId = DEFAULT_PROFILE_ID) {
+    const existing = await requireLeague(leagueId, profileId);
+    const memberId = leagueAccessProvider.assertMember(existing, memberKey);
+    const matchup = existing.matchups.find((item) => item.id === matchupId);
+    if (!matchup) throw new MiniLeagueNotFoundError("Matchup not found.");
+    if (![matchup.homeMemberId, matchup.awayMemberId].includes(memberId)) {
+      throw new LeagueAuthorizationError(
+        "Only a manager in this matchup can propose its result."
+      );
+    }
+    if (existing.lockedScoringPeriods.includes(matchup.scoringPeriod)) {
+      throw new MiniLeagueConflictError(
+        `Scoring period ${matchup.scoringPeriod} is locked.`
+      );
+    }
+    if (existing.scoreProposals.some((proposal) =>
+      proposal.matchupId === matchupId &&
+      proposal.proposedByMemberId === memberId &&
+      proposal.status === "PENDING")) {
+      throw new MiniLeagueConflictError(
+        "You already have a pending proposal for this matchup."
+      );
+    }
+    const normalized = normalizeScoreInput(homePoints, awayPoints);
+    const timestamp = now().toISOString();
+    const proposal = {
+      id: createId("proposal"),
+      matchupId,
+      proposedByMemberId: memberId,
+      homePoints: normalized.homePoints,
+      awayPoints: normalized.awayPoints,
+      status: "PENDING",
+      createdAt: timestamp,
+      resolvedAt: null,
+      resolvedByMemberId: null
+    };
+    const event = auditEvent(
+      "SCORE_PROPOSED",
+      existing,
+      timestamp,
+      {
+        actorMemberId: memberId,
+        scoringPeriod: matchup.scoringPeriod,
+        matchupId,
+        proposalId: proposal.id,
+        nextResult: normalized
+      }
+    );
+    const league = createMiniLeague({
+      ...existing,
+      scoreProposals: appendProposal(existing, proposal),
+      auditTrail: appendAudit(existing, event),
+      updatedAt: timestamp
+    });
+    await miniLeagueStore.save(league, profileId);
+    return { proposal, league: publicLeague(league) };
+  }
+
+  async function resolveScoreProposal({ leagueId, proposalId, decision, commissionerKey }, profileId = DEFAULT_PROFILE_ID) {
+    const existing = await requireLeague(leagueId, profileId);
+    leagueAccessProvider.assertCommissioner(existing, commissionerKey);
+    const proposal = existing.scoreProposals.find((item) =>
+      item.id === proposalId);
+    if (!proposal) throw new MiniLeagueNotFoundError("Score proposal not found.");
+    if (proposal.status !== "PENDING") {
+      throw new MiniLeagueConflictError("This score proposal is already resolved.");
+    }
+    const normalizedDecision = String(decision ?? "").trim().toUpperCase();
+    if (!["APPROVE", "REJECT"].includes(normalizedDecision)) {
+      throw new MiniLeagueValidationError("decision must be APPROVE or REJECT.");
+    }
+    const matchup = existing.matchups.find((item) =>
+      item.id === proposal.matchupId);
+    if (normalizedDecision === "APPROVE" &&
+        existing.lockedScoringPeriods.includes(matchup.scoringPeriod)) {
+      throw new MiniLeagueConflictError(
+        `Scoring period ${matchup.scoringPeriod} is locked.`
+      );
+    }
+    const timestamp = now().toISOString();
+    const previousResult = matchup.scoredAt
+      ? { homePoints: matchup.homePoints, awayPoints: matchup.awayPoints }
+      : null;
+    const nextResult = {
+      homePoints: proposal.homePoints,
+      awayPoints: proposal.awayPoints
+    };
+    const approved = normalizedDecision === "APPROVE";
+    const scoreProposals = existing.scoreProposals.map((item) => {
+      if (item.id === proposalId) {
+        return {
+          ...item,
+          status: approved ? "APPROVED" : "REJECTED",
+          resolvedAt: timestamp,
+          resolvedByMemberId: existing.ownerMemberId
+        };
+      }
+      if (approved && item.matchupId === proposal.matchupId &&
+          item.status === "PENDING") {
+        return {
+          ...item,
+          status: "SUPERSEDED",
+          resolvedAt: timestamp,
+          resolvedByMemberId: existing.ownerMemberId
+        };
+      }
+      return item;
+    });
+    const event = auditEvent(
+      approved ? "SCORE_PROPOSAL_APPROVED" : "SCORE_PROPOSAL_REJECTED",
+      existing,
+      timestamp,
+      {
+        scoringPeriod: matchup.scoringPeriod,
+        matchupId: matchup.id,
+        proposalId,
+        previousResult,
+        nextResult: approved ? nextResult : null
+      }
+    );
+    const league = createMiniLeague({
+      ...existing,
+      matchups: approved
+        ? existing.matchups.map((item) => item.id === matchup.id
+          ? {
+            ...item,
+            homePoints: proposal.homePoints,
+            awayPoints: proposal.awayPoints,
+            scoredAt: timestamp
+          }
+          : item)
+        : existing.matchups,
+      scoreProposals,
+      auditTrail: appendAudit(existing, event),
+      updatedAt: timestamp
+    });
+    await miniLeagueStore.save(league, profileId);
+    return publicLeague(league);
   }
 
   async function setScoringPeriodLock({ leagueId, scoringPeriod, locked, commissionerKey }, profileId = DEFAULT_PROFILE_ID) {
@@ -373,6 +666,13 @@ function createMiniLeagueService({
           "Record every matchup result before locking this scoring period."
         );
       }
+      if (existing.scoreProposals.some((proposal) =>
+        proposal.status === "PENDING" && periodMatchups.some((matchup) =>
+          matchup.id === proposal.matchupId))) {
+        throw new MiniLeagueConflictError(
+          "Approve or reject every pending proposal before locking this period."
+        );
+      }
     }
     const timestamp = now().toISOString();
     const event = auditEvent(
@@ -394,9 +694,39 @@ function createMiniLeagueService({
     return publicLeague(league);
   }
 
+  async function exportLeague({ leagueId, commissionerKey }, profileId = DEFAULT_PROFILE_ID) {
+    const league = await requireLeague(leagueId, profileId);
+    leagueAccessProvider.assertCommissioner(league, commissionerKey);
+    const {
+      authorizationMode,
+      commissionerKeyHash,
+      joinCodeHash,
+      memberAccess,
+      profileId: ignoredProfileId,
+      ...portableLeague
+    } = league;
+    void authorizationMode;
+    void commissionerKeyHash;
+    void joinCodeHash;
+    void memberAccess;
+    void ignoredProfileId;
+    return {
+      schemaVersion: "sports-hub-league-export/1.0",
+      exportedAt: now().toISOString(),
+      secretsIncluded: false,
+      requiresAccessReissue: true,
+      league: portableLeague
+    };
+  }
+
   function status() {
     return {
       authorization: leagueAccessProvider.status(),
+      migration: {
+        exportSchemaVersion: "sports-hub-league-export/1.0",
+        secretsIncluded: false,
+        requiresAccessReissue: true
+      },
       storage: miniLeagueStore.status?.() ?? {
         id: "custom",
         hosted: false,
@@ -409,17 +739,27 @@ function createMiniLeagueService({
     claimCommissioner: (...arguments_) =>
       serializeMutation(() => claimCommissioner(...arguments_)),
     create: (...arguments_) => serializeMutation(() => create(...arguments_)),
+    exportLeague,
     get,
     join: (...arguments_) => serializeMutation(() => join(...arguments_)),
     list,
     recordScore: (...arguments_) =>
       serializeMutation(() => recordScore(...arguments_)),
+    proposeScore: (...arguments_) =>
+      serializeMutation(() => proposeScore(...arguments_)),
+    resolveScoreProposal: (...arguments_) =>
+      serializeMutation(() => resolveScoreProposal(...arguments_)),
+    rotateCommissionerKey: (...arguments_) =>
+      serializeMutation(() => rotateCommissionerKey(...arguments_)),
     rotateJoinCode: (...arguments_) =>
       serializeMutation(() => rotateJoinCode(...arguments_)),
+    rotateMemberKey: (...arguments_) =>
+      serializeMutation(() => rotateMemberKey(...arguments_)),
     setScoringPeriodLock: (...arguments_) =>
       serializeMutation(() => setScoringPeriodLock(...arguments_)),
     status,
-    verifyCommissioner
+    verifyCommissioner,
+    verifyMember
   };
 }
 

@@ -112,6 +112,11 @@ function createSportsHubRouter({
         "DETERMINISTIC_MATCHUPS",
         "OFFICIAL_POINT_STANDINGS",
         "COMMISSIONER_AUTHORIZATION",
+        "MEMBER_AUTHORIZATION",
+        "SCORE_PROPOSALS",
+        "COMMISSIONER_APPROVALS",
+        "ACCESS_KEY_ROTATION",
+        "SECRET_FREE_LEAGUE_EXPORT",
         "JOIN_CODE_ROTATION",
         "SCORING_PERIOD_LOCKS",
         "RESULT_AUDIT_TRAIL",
@@ -175,6 +180,10 @@ function createSportsHubRouter({
     return request.get("x-mini-league-commissioner-key");
   }
 
+  function memberKey(request) {
+    return request.get("x-mini-league-member-key");
+  }
+
   router.get("/mini-leagues/status", (request, response) => {
     response.json(miniLeagueService.status());
   });
@@ -198,9 +207,7 @@ function createSportsHubRouter({
 
   router.post("/mini-leagues/join", async (request, response) => {
     try {
-      response.status(201).json({
-        league: await miniLeagueService.join(request.body)
-      });
+      response.status(201).json(await miniLeagueService.join(request.body));
     } catch (error) {
       sendMiniLeagueError(response, error);
     }
@@ -222,6 +229,40 @@ function createSportsHubRouter({
       response.status(201).json(
         await miniLeagueService.claimCommissioner(request.params.leagueId)
       );
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.post("/mini-leagues/:leagueId/commissioner/rotate", async (request, response) => {
+    try {
+      response.json(await miniLeagueService.rotateCommissionerKey({
+        leagueId: request.params.leagueId,
+        commissionerKey: commissionerKey(request)
+      }));
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.post("/mini-leagues/:leagueId/member/verify", async (request, response) => {
+    try {
+      response.json(await miniLeagueService.verifyMember({
+        leagueId: request.params.leagueId,
+        memberKey: memberKey(request)
+      }));
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.post("/mini-leagues/:leagueId/members/:memberId/access/rotate", async (request, response) => {
+    try {
+      response.json(await miniLeagueService.rotateMemberKey({
+        leagueId: request.params.leagueId,
+        memberId: request.params.memberId,
+        commissionerKey: commissionerKey(request)
+      }));
     } catch (error) {
       sendMiniLeagueError(response, error);
     }
@@ -257,6 +298,54 @@ function createSportsHubRouter({
     try {
       response.json({
         league: await miniLeagueService.get(request.params.leagueId)
+      });
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.get("/mini-leagues/:leagueId/export", async (request, response) => {
+    try {
+      const bundle = await miniLeagueService.exportLeague({
+        leagueId: request.params.leagueId,
+        commissionerKey: commissionerKey(request)
+      });
+      const safeId = String(request.params.leagueId)
+        .replace(/[^A-Za-z0-9_-]/g, "-");
+      response.set("content-type", "application/json; charset=utf-8");
+      response.set(
+        "content-disposition",
+        `attachment; filename="mini-league-${safeId}.json"`
+      );
+      response.send(`${JSON.stringify(bundle, null, 2)}\n`);
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.post("/mini-leagues/:leagueId/matchups/:matchupId/proposals", async (request, response) => {
+    try {
+      response.status(201).json(await miniLeagueService.proposeScore({
+        leagueId: request.params.leagueId,
+        matchupId: request.params.matchupId,
+        homePoints: request.body?.homePoints,
+        awayPoints: request.body?.awayPoints,
+        memberKey: memberKey(request)
+      }));
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.put("/mini-leagues/:leagueId/proposals/:proposalId", async (request, response) => {
+    try {
+      response.json({
+        league: await miniLeagueService.resolveScoreProposal({
+          leagueId: request.params.leagueId,
+          proposalId: request.params.proposalId,
+          decision: request.body?.decision,
+          commissionerKey: commissionerKey(request)
+        })
       });
     } catch (error) {
       sendMiniLeagueError(response, error);
