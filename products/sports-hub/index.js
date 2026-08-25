@@ -20,12 +20,19 @@ const { createEntitlementService } = require("./services/entitlements");
 const { createImportStore } = require("./services/import-store");
 const { createAnalysisStore } = require("./services/analysis-store");
 const { createCheckInStore } = require("./services/check-in-store");
+const { createMiniLeagueStore } = require("./services/mini-league-store");
 const { createImportService } = require("./services/import-service");
 const { createAnalysisService } = require("./services/analysis-service");
 const {
   CheckInNotFoundError,
   createCheckInService
 } = require("./services/check-in-service");
+const {
+  MiniLeagueConflictError,
+  MiniLeagueNotFoundError,
+  MiniLeagueValidationError,
+  createMiniLeagueService
+} = require("./services/mini-league-service");
 const {
   createPlayerIdentityService
 } = require("./services/player-identity-service");
@@ -50,6 +57,7 @@ function createSportsHubRouter({
   importStore = createImportStore(),
   analysisStore = createAnalysisStore(),
   checkInStore = createCheckInStore(),
+  miniLeagueStore = createMiniLeagueStore(),
   rosterImageParser = createRosterImageParser(),
   playerIdentityService = createPlayerIdentityService(),
   playerDataPreviewService = createPlayerDataPreviewService(),
@@ -61,6 +69,11 @@ function createSportsHubRouter({
   const checkInService = createCheckInService({
     analysisStore,
     checkInStore,
+    now
+  });
+  const miniLeagueService = createMiniLeagueService({
+    miniLeagueStore,
+    teamStore,
     now
   });
   const rosterImageRequests = new Map();
@@ -94,6 +107,9 @@ function createSportsHubRouter({
         "ANALYSIS_PROVENANCE",
         "SAVED_TEAM_CHECK_INS",
         "TEAM_PROGRESS_HISTORY",
+        "LOCAL_MINI_LEAGUES",
+        "DETERMINISTIC_MATCHUPS",
+        "OFFICIAL_POINT_STANDINGS",
         "ROSTER_IMAGE_EXTRACTION",
         "PLAYER_IDENTITY_RESOLUTION",
         "READ_ONLY_PLAYER_DATA_PREVIEW",
@@ -130,6 +146,71 @@ function createSportsHubRouter({
       response.status(400).json({
         error: error.message
       });
+    }
+  });
+
+  function sendMiniLeagueError(response, error) {
+    if (error instanceof MiniLeagueValidationError) {
+      return response.status(400).json({ error: error.message });
+    }
+    if (error instanceof MiniLeagueNotFoundError) {
+      return response.status(404).json({ error: error.message });
+    }
+    if (error instanceof MiniLeagueConflictError) {
+      return response.status(409).json({ error: error.message });
+    }
+    return response.status(500).json({ error: "Mini-league request failed." });
+  }
+
+  router.get("/mini-leagues", async (request, response) => {
+    try {
+      const leagues = await miniLeagueService.list();
+      response.json({ count: leagues.length, leagues });
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.post("/mini-leagues", async (request, response) => {
+    try {
+      response.status(201).json(await miniLeagueService.create(request.body));
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.post("/mini-leagues/join", async (request, response) => {
+    try {
+      response.status(201).json({
+        league: await miniLeagueService.join(request.body)
+      });
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.get("/mini-leagues/:leagueId", async (request, response) => {
+    try {
+      response.json({
+        league: await miniLeagueService.get(request.params.leagueId)
+      });
+    } catch (error) {
+      sendMiniLeagueError(response, error);
+    }
+  });
+
+  router.put("/mini-leagues/:leagueId/matchups/:matchupId/score", async (request, response) => {
+    try {
+      response.json({
+        league: await miniLeagueService.recordScore({
+          leagueId: request.params.leagueId,
+          matchupId: request.params.matchupId,
+          homePoints: request.body?.homePoints,
+          awayPoints: request.body?.awayPoints
+        })
+      });
+    } catch (error) {
+      sendMiniLeagueError(response, error);
     }
   });
 
