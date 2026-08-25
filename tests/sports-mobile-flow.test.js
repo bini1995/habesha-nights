@@ -9,6 +9,7 @@ const { createSportsHubRouter } = require("../products/sports-hub");
 const { createTeamStore } = require("../products/sports-hub/services/team-store");
 const { createImportStore } = require("../products/sports-hub/services/import-store");
 const { createAnalysisStore } = require("../products/sports-hub/services/analysis-store");
+const { createCheckInStore } = require("../products/sports-hub/services/check-in-store");
 
 async function testServer({ playerIdentityService, rosterImageParser } = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "sports-mobile-"));
@@ -20,6 +21,7 @@ async function testServer({ playerIdentityService, rosterImageParser } = {}) {
     teamStore,
     importStore: createImportStore({ file: path.join(directory, "imports.json") }),
     analysisStore: createAnalysisStore({ file: path.join(directory, "analyses.json") }),
+    checkInStore: createCheckInStore({ file: path.join(directory, "check-ins.json") }),
     playerIdentityService,
     rosterImageParser
   }));
@@ -73,6 +75,32 @@ test("root metadata and mobile navigation present Sports Hub first with legacy t
   assert.match(html, /aria-label="Sports navigation"/);
   assert.match(html, /<summary>Labs & more<\/summary>/);
   assert.doesNotMatch(html.match(/<nav class="topbar"[\s\S]*?<\/nav>/)[0], /Opportunity Agent|Event Finder/);
+});
+
+test("390px results save a check-in and open the team progress timeline", async () => {
+  const runtime = await testServer();
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(`${runtime.base}/sports-hub/football/?demo=1`);
+    await page.getByText("Your Team Score").waitFor();
+    await page.getByRole("button", { name: "Save check-in" }).click();
+    await page.getByText(/Baseline saved at/).waitFor();
+    await page.getByRole("link", { name: "View progress" }).click();
+    await page.getByRole("heading", { name: "See what changed." }).waitFor();
+    await page.getByText("Latest Team Score").waitFor();
+    assert.match(await page.locator("#history-summary").innerText(), /First check-in/i);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true
+    );
+    await page.close();
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => runtime.server.close(resolve));
+    await fs.rm(runtime.directory, { recursive: true, force: true });
+  }
 });
 
 test("390px screenshot scan requires consent and creates an editable roster preview", async () => {

@@ -123,7 +123,7 @@ function validateActiveStep(){
   return false;
 }
 function roster(){return [...list.children].map((card,index)=>{const name=card.querySelector(".p-name").value.trim();const id=card.dataset.canonicalPlayerId||slug(name,`player-${index+1}`);const raw=card.querySelector(".p-points").value;const identity=card.dataset.canonicalPlayerId?{canonicalPlayerId:card.dataset.canonicalPlayerId,matchMethod:card.dataset.identityMatchMethod,matchedAt:card.dataset.identityMatchedAt,providerId:card.dataset.identityProviderId,providerPlayerId:card.dataset.identityProviderPlayerId,sourceUpdatedAt:card.dataset.identitySourceUpdatedAt||null}:null;return {id:`slot-${index+1}`,role:card.querySelector(".p-role").value,player:{id,identity,name,position:card.querySelector(".p-position").value,status:card.querySelector(".p-status").value.toUpperCase()},projection:raw===""?null:{playerId:id,projectedFantasyPoints:Number(raw),source:"USER_SUPPLIED"}};});}
-function team(){const name=document.querySelector("#team-name").value.trim();return{id:`${slug(name,"team")}-${Date.now()}`,name,sport,leagueSettings:{name:document.querySelector("#league-name").value.trim()||"My League",sport,starterPositions:defaults,scoringLabel:sport==="SOCCER"?"User-supplied projected points":"User-supplied projected fantasy points"},roster:roster()};}
+function team(){const name=document.querySelector("#team-name").value.trim();const leagueName=document.querySelector("#league-name").value.trim()||"My League";return{id:`team-${sport.toLowerCase()}-${slug(leagueName,"league")}-${slug(name,"team")}`,name,sport,leagueSettings:{name:leagueName,sport,starterPositions:defaults,scoringLabel:sport==="SOCCER"?"User-supplied projected points":"User-supplied projected fantasy points"},roster:roster()};}
 function review(){document.querySelector("#review-list").innerHTML=roster().map(x=>`<div><strong>${escapeHtml(x.player.name||"Unnamed player")}</strong><span>${x.player.position} · ${x.role==="STARTER"?"Starter":"Bench"}</span></div>`).join("");}
 function componentLabel(key){return key.replace(/([A-Z])/g," $1").replace(/^./,x=>x.toUpperCase());}
 function recommendationTitle(item){if(item.action==="START_PLAYER")return `Start ${item.playerStarted.name}`;return `Add ${item.playerAdded?.name||"player"}`;}
@@ -137,6 +137,36 @@ function enhanceResults(result){
   const heading=[...document.querySelectorAll("#analysis-results h2")].at(-1);
   if(heading)heading.textContent="Your best next move";
   const link=document.createElement("a");link.href=`/sports-hub/${sport.toLowerCase()}/`;link.className="quiet analyze-again";link.textContent="Analyze another team";document.querySelector(".share").append(link);
+}
+function installCheckIn(result,teamData){
+  const panel=document.createElement("section");
+  panel.className="check-in-prompt";
+  panel.setAttribute("aria-labelledby","check-in-title");
+  panel.innerHTML=`<div><p class="kicker">Track your progress</p><h2 id="check-in-title">Save this score as a check-in</h2><p>Come back after lineup, projection, or injury-status changes to see whether your team moved forward.</p></div><div class="check-in-actions"><button class="primary" id="save-check-in" type="button">Save check-in</button><a class="quiet" id="view-history" href="/sports-hub/history/?teamId=${encodeURIComponent(teamData.id)}" hidden>View progress</a></div><p class="check-in-status" id="check-in-status" role="status" aria-live="polite"></p>`;
+  const share=document.querySelector(".share");
+  share.parentNode.insertBefore(panel,share);
+  const button=panel.querySelector("#save-check-in");
+  const history=panel.querySelector("#view-history");
+  const status=panel.querySelector("#check-in-status");
+  button.onclick=async()=>{
+    button.disabled=true;
+    status.textContent="Saving this score…";
+    try{
+      const response=await fetch(`/api/sports-hub/teams/${encodeURIComponent(teamData.id)}/check-ins`,{
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({analysisId:result.analysisId})
+      });
+      const body=await response.json();
+      if(!response.ok)throw new Error(body.error||"This check-in could not be saved.");
+      button.textContent="Check-in saved";
+      history.hidden=false;
+      status.textContent=body.comparison.summary.join(" ");
+    }catch(error){
+      button.disabled=false;
+      status.textContent=error.message;
+    }
+  };
 }
 function downloadCard(t,a,strong){const c=document.createElement("canvas");c.width=1200;c.height=630;const x=c.getContext("2d");x.fillStyle="#07100f";x.fillRect(0,0,c.width,c.height);x.fillStyle=getComputedStyle(document.body).getPropertyValue("--sport");x.fillRect(70,70,14,490);x.fillStyle="#f7f7f2";x.font="bold 34px sans-serif";x.fillText(`SPORTS HUB · ${sport}`,120,145);x.font="bold 62px sans-serif";x.fillText(t.name,120,260);x.font="bold 110px sans-serif";x.fillText(`${a.overallScore}/100`,120,405);x.font="32px sans-serif";x.fillText(`Grade ${a.letterGrade} · Strongest: ${componentLabel(strong[0])}`,120,480);const link=document.createElement("a");link.download="sports-hub-team-score.png";link.href=c.toDataURL("image/png");link.click();}
 function readImageFile(file) {
@@ -294,7 +324,7 @@ async function installRosterScanner() {
     finally{submit.disabled=false;picker.disabled=false;}
   };
 }
-async function analyze(teamData,options=[]){const saved=await fetch("/api/sports-hub/teams",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(teamData)});const body=await saved.json();if(!saved.ok)throw new Error(body.error||"Team could not be saved.");const response=await fetch(`/api/sports-hub/teams/${encodeURIComponent(body.team.id)}/analyze`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({availablePlayers:options})});const result=await response.json();if(!response.ok)throw new Error(result.error||"Analysis failed.");document.querySelector(".builder").hidden=true;document.querySelector(".progress").hidden=true;document.querySelector(".portal-hero").hidden=true;render(result,body.team);enhanceResults(result);}
+async function analyze(teamData,options=[]){const saved=await fetch("/api/sports-hub/teams",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(teamData)});const body=await saved.json();if(!saved.ok)throw new Error(body.error||"Team could not be saved.");const response=await fetch(`/api/sports-hub/teams/${encodeURIComponent(body.team.id)}/analyze`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({availablePlayers:options})});const result=await response.json();if(!response.ok)throw new Error(result.error||"Analysis failed.");document.querySelector(".builder").hidden=true;document.querySelector(".progress").hidden=true;document.querySelector(".portal-hero").hidden=true;render(result,body.team);enhanceResults(result);installCheckIn(result,body.team);}
 async function loadDemo(run=false){const response=await fetch(`/api/sports-hub/samples/${sport.toLowerCase()}`);const data=await response.json();document.querySelector("#team-name").value=data.name;document.querySelector("#league-name").value=data.leagueSettings.name;list.replaceChildren();data.roster.forEach(playerCard);sampleOptions=data.availablePlayers||[];showStep(3);if(run)await analyze({...data,id:`${data.id}-${Date.now()}`},sampleOptions);}
 document.querySelectorAll("[data-next]").forEach(button=>button.onclick=()=>{if(validateActiveStep())showStep(currentStep+1);});document.querySelectorAll("[data-back]").forEach(button=>button.onclick=()=>showStep(currentStep-1));document.querySelector("#add-player").onclick=()=>playerCard({role:"BENCH"});document.querySelector("#builder-form").onsubmit=async(event)=>{event.preventDefault();const error=document.querySelector("#builder-error");error.textContent="";try{await analyze(team(),sampleOptions);sessionStorage.removeItem(`sports-hub-draft-${sport}`);}catch(e){error.textContent=e.message;}};
 const draftKey=`sports-hub-draft-${sport}`;
