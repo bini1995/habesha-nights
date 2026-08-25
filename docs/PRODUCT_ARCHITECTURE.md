@@ -10,7 +10,8 @@ logic directly.
 ### Sports Hub (primary)
 
 The root experience and primary brand. It owns fantasy sport models, local
-teams, imports, analysis snapshots, Team Score, recommendations, entitlements,
+teams, imports, analysis snapshots, immutable team check-ins, Team Score,
+recommendations, entitlements,
 the consent-based roster image extraction boundary, and the football,
 basketball, and soccer interfaces. `/sports-hub/` remains a compatibility URL
 while `/` serves the same landing experience directly.
@@ -32,6 +33,12 @@ The `PlayerDataProvider` boundary advertises individual capabilities for player
 directories, projections, injuries, and schedules. The default adapter exposes
 only a fictional offline directory. No adapter may claim live data or supply
 projections until its commercial-use rights and source mappings are reviewed.
+
+Team check-ins are a separate persistence boundary from teams and analysis
+inputs. Each check-in freezes the result version and minimal comparison
+evidence, while the progress service calculates deterministic changes against
+the prior check-in for the same profile and team. Recommendation payloads do
+not enter this store, preserving the entitlement boundary.
 
 ### Opportunity Agent (Labs)
 

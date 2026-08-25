@@ -168,3 +168,37 @@ Invalid, duplicate, malformed, and cross-sport fixture rows are rejected
 individually. Every projection retains its scoring period, season, provider
 player ID, source update time, and deterministic freshness result. Stale and
 missing data are surfaced as plain-language warnings rather than silently used.
+
+## Phase 3G saved check-ins and progress
+
+Every new analysis stores an immutable version 2 analysis snapshot. From the
+result screen, a user may explicitly save that analysis as a versioned team
+check-in. Check-ins retain the exact Team Score output, component scores,
+confidence, roster roles, user-supplied projections, player availability
+statuses, input checksum, and source provenance that existed at that moment.
+They never contain recommendation details.
+If two adjacent check-ins use different Team Score versions, roster and
+projection evidence still compares, but the overall and component scores are
+explicitly marked non-comparable.
+
+The phone-first progress screen at `/sports-hub/history/` compares each saved
+check-in with the previous one for the same team. It reports Team Score and
+projection movement, component changes, players added or removed, starter and
+bench changes, and availability-status changes. The first check-in is clearly
+labeled as a baseline. Old scores are never recalculated with a newer scoring
+formula.
+
+Check-ins are separately persisted in `logs/sports-hub/check-ins.json` with
+260-record retention and default-profile isolation. Saving the same analysis
+twice is idempotent, and an analysis ID cannot be reused for another team.
+
+Check-in endpoints under `/api/sports-hub`:
+
+- `POST /teams/:teamId/check-ins` accepts `{ analysisId }` and saves or returns
+  the matching check-in.
+- `GET /teams/:teamId/check-ins` returns the saved team plus a newest-first
+  comparison timeline.
+
+The standard builder now uses a stable ID derived from sport, league, and team
+name so later analyses of that same team build one history. Changing those
+identifying fields intentionally starts a separate team timeline.

@@ -83,6 +83,10 @@
   projections, injuries, schedules, freshness, and isolated invalid rows.
 - [x] Add a non-persisting saved-team player-data preview that keeps provider
   facts separate from user inputs and recommendations.
+- [x] Add immutable, explicit team check-ins that preserve historical score,
+  component, roster, projection, availability, and provenance evidence.
+- [x] Add deterministic comparisons and a phone-first progress timeline without
+  persisting or leaking recommendation details.
 - Add one licensed live provider adapter only after commercial-use permission
   is confirmed.
 - [x] Build read-only roster analysis and lineup recommendations first.
@@ -99,10 +103,14 @@
 
 ## Immediate next slice
 
-Obtain written commercial-display and derived-score rights plus a development
-key before adding a real football network client. After that gate, implement it
-disabled by default with timeouts, bounded retries, rate-limit handling, safe
-errors, cache rules, and contract parity with the offline fixture. Until that
-approval arrives, proceed with saved weekly analysis comparisons and a mobile
-history view using only user-supplied or clearly fictional data. Preserve the
-Labs products and the existing free/premium recommendation boundary.
+Begin the mini-league foundation without waiting for a live-data license. Add
+versioned league, member, team-membership, matchup, scoring-period, and standing
+models; explicit create/join flows; deterministic schedule generation; and a
+phone-first league home. Keep official fantasy points, Team Score, and the
+future Manager/AI scores visibly separate. Do not add payments, public invites,
+or automatic roster actions yet.
+
+In parallel, obtain written commercial-display and derived-score rights plus a
+development key before adding a real football network client. That client must
+remain disabled by default until timeout, retry, rate-limit, cache, retention,
+and contract-parity checks pass.

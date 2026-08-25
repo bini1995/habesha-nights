@@ -11,6 +11,13 @@ plain-language strengths and weaknesses, and up to two complete recommendations
 for the default free entitlement. Additional recommendation details are removed
 from the server response, not hidden in the browser.
 
+Users can explicitly save any new analysis as an immutable check-in and revisit
+it from the phone-first progress screen at `/sports-hub/history/`. The timeline
+compares Team Score, supplied projection totals, roster membership, lineup
+roles, and availability statuses with the previous saved snapshot. Historical
+results retain their original scoring version and are not recalculated later.
+Recommendation details are excluded from check-in persistence.
+
 ## What the numbers mean
 
 - **Team Score** measures roster quality from supplied projections, positional
@@ -28,6 +35,11 @@ Team Score normalizes the projected points the user supplies.
 Share summaries and downloadable cards include sport, team name, score, grade,
 and strongest component. They do not contain roster names or private input data.
 No platform credentials or external provider connection is required.
+
+Check-ins are stored separately from teams, imports, and analyses under the
+ignored Docker-backed `logs/sports-hub/` persistence boundary. They are scoped
+to the default profile and retained for 260 records. Saving the same analysis
+again is idempotent.
 
 When image extraction is configured, users may upload a roster screenshot and
 review the visible names before saving. A separate deterministic identity step
