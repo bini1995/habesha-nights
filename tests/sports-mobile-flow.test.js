@@ -105,7 +105,7 @@ test("390px results save a check-in and open the team progress timeline", async 
   }
 });
 
-test("390px mini-league flow unlocks commissioner scoring and locks a completed period", async () => {
+test("390px mini-league flow proposes, approves, and locks an official result", async () => {
   const runtime = await testServer();
   let browser;
   try {
@@ -139,19 +139,28 @@ test("390px mini-league flow unlocks commissioner scoring and locks a completed 
     await joinForm.getByLabel(/Your saved team/).selectOption("mobile-rivals");
     await joinForm.getByRole("button", { name: "Join league" }).click();
     await page.getByText("2 managers · 14 scoring periods").waitFor();
+    const memberKey = await page.locator("#member-key-value").innerText();
+    assert.match(memberKey, /^[A-Za-z0-9_-]{32,128}$/);
 
     await page.evaluate(() => sessionStorage.clear());
     await page.reload();
-    await page.getByRole("button", { name: "Commissioner key required" }).waitFor();
-    await page.getByLabel("Commissioner key").fill(commissionerKey);
-    await page.getByRole("button", { name: "Unlock controls" }).click();
-    await page.getByText("Commissioner controls unlocked for this browser session.").waitFor();
+    await page.getByRole("button", { name: "League access required" }).waitFor();
+    await page.getByLabel("Member key").fill(memberKey);
+    await page.getByRole("button", { name: "Unlock proposals" }).click();
+    await page.getByText("Blake can now propose matchup scores.").waitFor();
 
     const matchup = page.locator(".matchup-card").first();
     await matchup.locator('input[name="homePoints"]').fill("121.5");
     await matchup.locator('input[name="awayPoints"]').fill("116.25");
-    await matchup.getByRole("button", { name: "Record result" }).click();
-    await page.getByText("Result recorded. Standings updated.").waitFor();
+    await matchup.getByRole("button", { name: "Propose result" }).click();
+    await page.getByText("Proposal sent. Standings will wait for commissioner approval.").waitFor();
+    assert.match(await page.locator(".standings-list").innerText(), /0-0-0/);
+
+    await page.getByLabel("Commissioner key").fill(commissionerKey);
+    await page.getByRole("button", { name: "Unlock controls" }).click();
+    await page.getByText("Commissioner controls unlocked for this browser session.").waitFor();
+    await page.locator(".proposal-card.pending").getByRole("button", { name: "Approve" }).click();
+    await page.getByText("Proposal approved. Standings updated.").waitFor();
     await page.getByText("Scoring started").waitFor();
     assert.match(await page.locator(".standings-list").innerText(), /1-0-0/);
     assert.match(await page.locator(".score-truth").innerText(), /never changes wins or losses/i);

@@ -108,7 +108,7 @@
         <div>
           <p class="kicker">Shown once</p>
           <h2>Save your private keys.</h2>
-          <p>The join code is for friends. The commissioner key controls results and league settings. Neither can be viewed again.</p>
+          <p>The join code is for friends. The member key lets one manager propose scores. The commissioner key controls official results and settings. None can be viewed again.</p>
         </div>
         <div class="secret-list">
           <div id="join-code-secret" class="secret-row">
@@ -120,6 +120,11 @@
             <span>Commissioner recovery key</span>
             <strong id="commissioner-key-value"></strong>
             <button id="copy-commissioner-key" class="quiet" type="button">Copy commissioner key</button>
+          </div>
+          <div id="member-key-secret" class="secret-row">
+            <span id="member-key-label">Your member key</span>
+            <strong id="member-key-value"></strong>
+            <button id="copy-member-key" class="quiet" type="button">Copy member key</button>
           </div>
         </div>
         <p id="copy-status" class="form-status" role="status" aria-live="polite"></p>
@@ -144,6 +149,24 @@
         </div>
       </aside>
 
+      <section id="member-access-panel" class="member-access-panel" aria-labelledby="member-access-title">
+        <div class="commissioner-heading">
+          <div>
+            <p class="kicker">Your access</p>
+            <h2 id="member-access-title">Manager score proposals</h2>
+          </div>
+          <span id="member-access-state" class="count-pill">View only</span>
+        </div>
+        <p>Managers can propose the official score for a matchup they played. Standings change only after commissioner approval.</p>
+        <form id="member-unlock" class="commissioner-unlock">
+          <label>Member key
+            <input id="member-key-input" type="password" autocomplete="off" placeholder="Paste your private member key" required>
+          </label>
+          <button class="quiet" type="submit">Unlock proposals</button>
+        </form>
+        <p id="member-access-status" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+
       <section id="commissioner-panel" class="commissioner-panel" aria-labelledby="commissioner-title">
         <div class="commissioner-heading">
           <div>
@@ -162,7 +185,9 @@
         <button id="claim-commissioner" class="quiet" type="button" hidden>Claim legacy commissioner access</button>
         <div id="commissioner-actions" class="commissioner-actions" hidden>
           <button id="rotate-join-code" class="quiet" type="button">Rotate friend code</button>
+          <button id="rotate-commissioner-key" class="quiet" type="button">Replace commissioner key</button>
           <button id="toggle-period-lock" class="quiet" type="button">Lock period</button>
+          <button id="download-league-export" class="quiet" type="button">Download migration copy</button>
         </div>
         <p id="commissioner-status" class="form-status" role="status" aria-live="polite"></p>
       </section>
@@ -206,6 +231,19 @@
         </div>
         <p id="score-status" class="league-status" role="status" aria-live="polite"></p>
         <div id="matchup-list" class="matchup-list"></div>
+      </section>
+
+      <section class="proposals-panel" aria-labelledby="proposals-title">
+        <div class="league-section-head compact-head">
+          <div>
+            <p class="kicker">Needs a decision</p>
+            <h2 id="proposals-title">Score proposals</h2>
+          </div>
+          <span id="proposal-count" class="count-pill"></span>
+        </div>
+        <p>Proposals do not affect standings until the commissioner approves them.</p>
+        <p id="proposal-status" class="form-status" role="status" aria-live="polite"></p>
+        <div id="proposal-list" class="proposal-list"></div>
       </section>
 
       <section class="activity-panel" aria-labelledby="activity-title">
