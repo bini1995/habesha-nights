@@ -11,7 +11,8 @@ logic directly.
 
 The root experience and primary brand. It owns fantasy sport models, local
 teams, imports, analysis snapshots, immutable team check-ins, Team Score,
-recommendations, entitlements,
+recommendations, entitlements, private local mini-leagues, official-point
+matchups, derived standings,
 the consent-based roster image extraction boundary, and the football,
 basketball, and soccer interfaces. `/sports-hub/` remains a compatibility URL
 while `/` serves the same landing experience directly.
@@ -39,6 +40,15 @@ inputs. Each check-in freezes the result version and minimal comparison
 evidence, while the progress service calculates deterministic changes against
 the prior check-in for the same profile and team. Recommendation payloads do
 not enter this store, preserving the entitlement boundary.
+
+Mini-leagues have their own versioned persistence and service boundary. Saved
+teams may be linked to members only when profile and sport match, but leagues do
+not import Team Score or recommendation data into matchups. A deterministic
+schedule is domain output, and standings are recalculated exclusively from
+entered official fantasy points. Join-code hashes are persisted; the plaintext
+code is returned only by the create operation. The current local profile is not
+an authentication system, so public sharing and multi-device hosting remain
+disabled until ownership and authorization are added.
 
 ### Opportunity Agent (Labs)
 

@@ -3,7 +3,8 @@
 Sports Hub is the primary product interface at `/`, with `/sports-hub/` kept as
 a compatibility URL. It offers separate,
 indexable football, basketball, and soccer Team Analyzer portals plus an advanced
-CSV/JSON import workflow at `/sports-hub/import/`.
+CSV/JSON import workflow at `/sports-hub/import/`. Private local mini-leagues
+live at `/sports-hub/leagues/`.
 
 The guided builder asks for team basics, players, and a final review. Results show
 a deterministic 0–100 Team Score, grade, component breakdown, completeness,
@@ -17,6 +18,19 @@ compares Team Score, supplied projection totals, roster membership, lineup
 roles, and availability statuses with the previous saved snapshot. Historical
 results retain their original scoring version and are not recalculated later.
 Recommendation details are excluded from check-in persistence.
+
+Mini-leagues provide explicit create and join flows for football, basketball,
+and soccer. A creator receives an unambiguous eight-character private code once;
+only its SHA-256 hash is persisted. Membership remains open until the first
+result is recorded. Deterministic round-robin matchups are regenerated whenever
+a manager joins before that lock.
+
+League standings are derived only from the official fantasy point totals a user
+enters for each matchup. Those totals may be corrected explicitly, with the
+standings recalculated from the stored matchups. Team Score never affects a win,
+loss, tie, points-for total, or rank. Manager Score and AI ranking remain
+uncalculated. This local MVP has no accounts, public invitations, payments, or
+automatic roster actions.
 
 ## What the numbers mean
 
@@ -40,6 +54,10 @@ Check-ins are stored separately from teams, imports, and analyses under the
 ignored Docker-backed `logs/sports-hub/` persistence boundary. They are scoped
 to the default profile and retained for 260 records. Saving the same analysis
 again is idempotent.
+
+Mini-leagues use another independent atomic store at
+`logs/sports-hub/mini-leagues.json`, scoped to the default profile and bounded
+to 100 leagues. Join-code plaintext is never written to the store.
 
 When image extraction is configured, users may upload a roster screenshot and
 review the visible names before saving. A separate deterministic identity step

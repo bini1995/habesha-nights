@@ -202,3 +202,34 @@ Check-in endpoints under `/api/sports-hub`:
 The standard builder now uses a stable ID derived from sport, league, and team
 name so later analyses of that same team build one history. Changing those
 identifying fields intentionally starts a separate team timeline.
+
+## Phase 3H private mini-leagues
+
+The phone-first mini-league screen at `/sports-hub/leagues/` supports football,
+basketball, and soccer. A local user can create a league, receive a private code
+once, join with that code, optionally link a saved same-sport team, and record or
+correct the official fantasy point totals for scheduled matchups.
+
+League records use the `sports-hub-mini-league/1.0` schema and persist separately
+in `logs/sports-hub/mini-leagues.json`. Only a SHA-256 join-code hash is stored.
+Manager names and linked teams are unique within a league, leagues are capped at
+12 managers, and membership locks after the first matchup result is recorded.
+
+Schedules use a deterministic round-robin rotation for the configured number of
+scoring periods. Standings are derived from completed matchup totals and ranked
+by wins, ties, point differential, points for, and a stable name/ID fallback.
+Team Score does not affect standings. Manager Score and AI ranking are explicit
+reserved fields with `null` values.
+
+Mini-league endpoints under `/api/sports-hub`:
+
+- `POST /mini-leagues` creates a league and returns the private join code once.
+- `GET /mini-leagues` lists local profile leagues without join-code hashes.
+- `GET /mini-leagues/:leagueId` returns a league and derived standings.
+- `POST /mini-leagues/join` adds a manager before scoring begins.
+- `PUT /mini-leagues/:leagueId/matchups/:matchupId/score` records or explicitly
+  replaces both official point totals.
+
+This phase is intentionally local and account-free. Private codes are joining
+convenience, not authentication credentials. There are no public invite links,
+payments, automatic roster changes, or live provider claims.

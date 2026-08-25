@@ -90,7 +90,10 @@
 - Add one licensed live provider adapter only after commercial-use permission
   is confirmed.
 - [x] Build read-only roster analysis and lineup recommendations first.
-- Add mini-league creation, membership, schedules, and deterministic scoring.
+- [x] Add versioned private mini-league creation, membership, deterministic
+  round-robin schedules, manual official-point results, and derived standings.
+- [x] Add a phone-first league home with explicit create/join flows, one-time
+  private codes, saved-team links, matchup entry, and score-separation copy.
 - Keep AI advice explainable and require confirmation for roster changes.
 
 ## Phase 4 — AI scoring and ranking
@@ -103,12 +106,12 @@
 
 ## Immediate next slice
 
-Begin the mini-league foundation without waiting for a live-data license. Add
-versioned league, member, team-membership, matchup, scoring-period, and standing
-models; explicit create/join flows; deterministic schedule generation; and a
-phone-first league home. Keep official fantasy points, Team Score, and the
-future Manager/AI scores visibly separate. Do not add payments, public invites,
-or automatic roster actions yet.
+Prepare mini-leagues for use beyond one local device. Add authenticated profile
+and league ownership boundaries, role-based commissioner actions, join-code
+rotation, a score-change audit trail, scoring-period locks, and a migration path
+from the local JSON store to a hosted database. Preserve the current local mode
+for offline development and do not add payments until ownership, security,
+privacy, recovery, and entitlement tests are in place.
 
 In parallel, obtain written commercial-display and derived-score rights plus a
 development key before adding a real football network client. That client must
