@@ -15,6 +15,13 @@ const {
   createSportsHubRouter
 } = require("../products/sports-hub");
 
+const SUPABASE_BROWSER_BUNDLE = Path.join(
+  Path.dirname(require.resolve("@supabase/supabase-js/package.json")),
+  "dist",
+  "umd",
+  "supabase.js"
+);
+
 const {
   getAllWatches,
   createWatch,
@@ -22,7 +29,7 @@ const {
   setWatchEnabled
 } = require("./watch-service");
 
-function createDashboardApp() {
+function createDashboardApp({ sportsHubOptions = {} } = {}) {
   const app = express();
 
   app.disable("x-powered-by");
@@ -48,8 +55,13 @@ function createDashboardApp() {
   }
   app.use(
     "/api/sports-hub",
-    createSportsHubRouter()
+    createSportsHubRouter(sportsHubOptions)
   );
+
+  app.get("/vendor/supabase.js", (request, response) => {
+    response.set("cache-control", "public, max-age=86400");
+    response.sendFile(SUPABASE_BROWSER_BUNDLE);
+  });
 
   app.get("/", (request, response) => {
     response.sendFile(Path.join(__dirname, "..", "public", "sports-hub", "index.html"));

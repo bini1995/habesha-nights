@@ -21,6 +21,11 @@ const { createImportStore } = require("./services/import-store");
 const { createAnalysisStore } = require("./services/analysis-store");
 const { createCheckInStore } = require("./services/check-in-store");
 const { createMiniLeagueStore } = require("./services/mini-league-store");
+const {
+  HostedAuthConfigurationError,
+  HostedAuthenticationError,
+  createHostedAuthProvider
+} = require("./services/hosted-auth-provider");
 const { createImportService } = require("./services/import-service");
 const { createAnalysisService } = require("./services/analysis-service");
 const {
@@ -59,6 +64,7 @@ function createSportsHubRouter({
   analysisStore = createAnalysisStore(),
   checkInStore = createCheckInStore(),
   miniLeagueStore = createMiniLeagueStore(),
+  hostedAuthProvider = createHostedAuthProvider(),
   rosterImageParser = createRosterImageParser(),
   playerIdentityService = createPlayerIdentityService(),
   playerDataPreviewService = createPlayerDataPreviewService(),
@@ -117,6 +123,8 @@ function createSportsHubRouter({
         "COMMISSIONER_APPROVALS",
         "ACCESS_KEY_ROTATION",
         "SECRET_FREE_LEAGUE_EXPORT",
+        "HOSTED_ACCOUNT_CONFIGURATION",
+        "SERVER_VERIFIED_AUTH_IDENTITY",
         "JOIN_CODE_ROTATION",
         "SCORING_PERIOD_LOCKS",
         "RESULT_AUDIT_TRAIL",
@@ -183,6 +191,41 @@ function createSportsHubRouter({
   function memberKey(request) {
     return request.get("x-mini-league-member-key");
   }
+
+  function bearerToken(request) {
+    const authorization = String(request.get("authorization") ?? "").trim();
+    const match = authorization.match(/^Bearer\s+(.+)$/i);
+    return match ? match[1].trim() : "";
+  }
+
+  router.get("/auth/status", (request, response) => {
+    response.set("cache-control", "no-store");
+    response.json(hostedAuthProvider.status());
+  });
+
+  router.get("/auth/config", (request, response) => {
+    response.set("cache-control", "no-store");
+    response.json(hostedAuthProvider.publicConfiguration());
+  });
+
+  router.get("/auth/me", async (request, response) => {
+    response.set("cache-control", "private, no-store");
+    try {
+      response.json({
+        user: await hostedAuthProvider.verifyAccessToken(bearerToken(request))
+      });
+    } catch (error) {
+      if (error instanceof HostedAuthConfigurationError) {
+        return response.status(503).json({ error: error.message });
+      }
+      if (error instanceof HostedAuthenticationError) {
+        return response.status(401).json({ error: error.message });
+      }
+      response.status(502).json({
+        error: "The account provider could not verify this session."
+      });
+    }
+  });
 
   router.get("/mini-leagues/status", (request, response) => {
     response.json(miniLeagueService.status());
