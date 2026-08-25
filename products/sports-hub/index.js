@@ -19,8 +19,13 @@ const { createTeamStore } = require("./services/team-store");
 const { createEntitlementService } = require("./services/entitlements");
 const { createImportStore } = require("./services/import-store");
 const { createAnalysisStore } = require("./services/analysis-store");
+const { createCheckInStore } = require("./services/check-in-store");
 const { createImportService } = require("./services/import-service");
 const { createAnalysisService } = require("./services/analysis-service");
+const {
+  CheckInNotFoundError,
+  createCheckInService
+} = require("./services/check-in-service");
 const {
   createPlayerIdentityService
 } = require("./services/player-identity-service");
@@ -44,6 +49,7 @@ function createSportsHubRouter({
   entitlementService = createEntitlementService(),
   importStore = createImportStore(),
   analysisStore = createAnalysisStore(),
+  checkInStore = createCheckInStore(),
   rosterImageParser = createRosterImageParser(),
   playerIdentityService = createPlayerIdentityService(),
   playerDataPreviewService = createPlayerDataPreviewService(),
@@ -52,6 +58,11 @@ function createSportsHubRouter({
   const router = express.Router();
   const importService = createImportService({ teamStore, importStore, now });
   const analysisService = createAnalysisService({ analysisStore, entitlementService, now });
+  const checkInService = createCheckInService({
+    analysisStore,
+    checkInStore,
+    now
+  });
   const rosterImageRequests = new Map();
 
   function allowRosterImageRequest(request) {
@@ -81,6 +92,8 @@ function createSportsHubRouter({
         "LOCAL_TEAM_PERSISTENCE",
         "CSV_JSON_IMPORT",
         "ANALYSIS_PROVENANCE",
+        "SAVED_TEAM_CHECK_INS",
+        "TEAM_PROGRESS_HISTORY",
         "ROSTER_IMAGE_EXTRACTION",
         "PLAYER_IDENTITY_RESOLUTION",
         "READ_ONLY_PLAYER_DATA_PREVIEW",
@@ -250,6 +263,39 @@ function createSportsHubRouter({
     } catch (error) {
       if (error instanceof PlayerDataCapabilityError) {
         return response.status(409).json({ error: error.message });
+      }
+      response.status(400).json({ error: error.message });
+    }
+  });
+
+  router.get("/teams/:teamId/check-ins", async (request, response) => {
+    try {
+      const team = await teamStore.get(request.params.teamId);
+      if (!team) return response.status(404).json({ error: "Team not found." });
+      const timeline = await checkInService.timeline(team.id, team.profileId);
+      response.json({
+        count: timeline.length,
+        team,
+        timeline
+      });
+    } catch (error) {
+      response.status(500).json({ error: error.message });
+    }
+  });
+
+  router.post("/teams/:teamId/check-ins", async (request, response) => {
+    try {
+      const team = await teamStore.get(request.params.teamId);
+      if (!team) return response.status(404).json({ error: "Team not found." });
+      const result = await checkInService.create({
+        analysisId: request.body?.analysisId,
+        profileId: team.profileId,
+        teamId: team.id
+      });
+      response.status(result.created ? 201 : 200).json(result);
+    } catch (error) {
+      if (error instanceof CheckInNotFoundError) {
+        return response.status(404).json({ error: error.message });
       }
       response.status(400).json({ error: error.message });
     }

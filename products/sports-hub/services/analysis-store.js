@@ -9,6 +9,11 @@ function createAnalysisStore({ file = DEFAULT_ANALYSES_FILE } = {}) {
     return record;
   }
   async function list(profileId = "default") { const data = await store.load(); return data.profiles?.[profileId] ?? []; }
-  return { list, save };
+  async function get(analysisId, profileId = "default") {
+    return (await list(profileId)).find(
+      (record) => record.analysisId === analysisId
+    ) ?? null;
+  }
+  return { get, list, save };
 }
 module.exports = { DEFAULT_ANALYSES_FILE, createAnalysisStore };

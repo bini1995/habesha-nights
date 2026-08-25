@@ -27,8 +27,9 @@ function createAnalysisService({ analysisStore, entitlementService, now = () => 
     const snapshotChecksum = checksum(JSON.stringify(inputSnapshot));
     const finalProvenance = Object.freeze({ ...provenance, snapshotChecksum });
     const analysisId = `analysis-${crypto.randomUUID()}`;
-    await analysisStore.save(Object.freeze({ analysisId, profileId: team.profileId, teamId: team.id, importId: importRecord?.importId ?? null, analyzedAt: now().toISOString(), inputSnapshot: Object.freeze({ team, availablePlayers, provenance: finalProvenance }), inputChecksum: snapshotChecksum }));
-    return Object.freeze({ analysisId, analysis: Object.freeze({ ...analysis, provenance: finalProvenance }), entitlement: entitled.tier, recommendations: entitled.recommendations, lockedRecommendationCount: entitled.lockedRecommendationCount });
+    const finalAnalysis = Object.freeze({ ...analysis, provenance: finalProvenance });
+    await analysisStore.save(Object.freeze({ analysisId, profileId: team.profileId, teamId: team.id, importId: importRecord?.importId ?? null, analyzedAt: now().toISOString(), inputSnapshot: Object.freeze({ team, availablePlayers, provenance: finalProvenance }), inputChecksum: snapshotChecksum, outputSnapshot: finalAnalysis, schemaVersion: "sports-hub-analysis-snapshot/2.0" }), team.profileId);
+    return Object.freeze({ analysisId, analysis: finalAnalysis, entitlement: entitled.tier, recommendations: entitled.recommendations, lockedRecommendationCount: entitled.lockedRecommendationCount });
   }
   return { analyze };
 }
