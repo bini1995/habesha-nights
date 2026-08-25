@@ -100,6 +100,11 @@
   explicit result corrections, and a bounded append-only audit trail.
 - [x] Migrate local version 1.0 leagues safely and expose provider-neutral
   authorization and storage readiness without claiming hosted accounts.
+- [x] Issue separate member access keys, allow matchup participants to propose
+  scores, and require commissioner approval before standings change.
+- [x] Add commissioner/member key rotation, proposal decisions, proposal audit
+  receipts, and a downloadable migration bundle with all secrets removed.
+- [x] Migrate version 1.1 leagues into explicit member-access reissue state.
 - Keep AI advice explainable and require confirmation for roster changes.
 
 ## Phase 4 — AI scoring and ranking
@@ -112,12 +117,13 @@
 
 ## Immediate next slice
 
-Connect one authenticated identity provider and one hosted transactional store
-in a staging environment. Replace local capability-key convenience with
-per-user owner/member sessions, add explicit local export/import migration,
-commissioner recovery and revocation, member score proposals, rate limits, and
-authorization tests across two devices. Preserve offline local mode and do not
-add payments until those ownership, security, privacy, and recovery paths pass.
+Connect Supabase Auth and Postgres in a staging environment after the project
+owner supplies the project URL and API keys through local environment settings.
+Map authenticated users to owner/member roles with Row Level Security, import
+the secret-free local migration bundle while reissuing access, add recovery and
+rate limits, and run authorization tests across two devices. Preserve offline
+local mode and do not add payments until those hosted ownership, security,
+privacy, and recovery paths pass.
 
 In parallel, obtain written commercial-display and derived-score rights plus a
 development key before adding a real football network client. That client must

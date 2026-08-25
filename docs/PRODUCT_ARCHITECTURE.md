@@ -47,11 +47,15 @@ not import Team Score or recommendation data into matchups. A deterministic
 schedule is domain output, and standings are recalculated exclusively from
 entered official fantasy points. Friend-code and commissioner-key hashes are
 persisted; plaintext secrets are returned only when created or rotated.
-Commissioner authorization protects scoring and settings, while period locks
-and a 500-entry audit window preserve local result integrity. Version 1.0 league
-records migrate to an explicitly unclaimed local state and may be claimed once.
-Authorization and persistence expose status interfaces for future adapters, but
-the current local profile and session key are not an authentication system.
+Commissioner authorization protects scoring and settings. Separate member keys
+allow only matchup participants to propose a result, and standings remain
+unchanged until a commissioner approves it. Period locks, key rotation, proposal
+decisions, and a 500-entry audit window preserve local result integrity. Version
+1.0 commissioner access migrates to an explicitly unclaimed state; version 1.1
+member access migrates to a reissue state. A portable export excludes all key
+hashes so hosted identity must issue fresh access. Authorization and persistence
+expose status interfaces for future adapters, but the current local profile and
+session keys are not an authentication system.
 Public sharing and multi-device hosting remain disabled until hosted identity,
 ownership, recovery, and transactional storage are connected and tested.
 

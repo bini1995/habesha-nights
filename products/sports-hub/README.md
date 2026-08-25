@@ -202,20 +202,21 @@ The standard builder now uses a stable ID derived from sport, league, and team
 name so later analyses of that same team build one history. Changing those
 identifying fields intentionally starts a separate team timeline.
 
-## Phase 3H–3I private mini-leagues and commissioner controls
+## Phase 3H–3J private mini-leagues, roles, and score proposals
 
 The phone-first mini-league screen at `/sports-hub/leagues/` supports football,
 basketball, and soccer. A local user can create a league, receive a friend join
-code and separate commissioner recovery key once, join with the friend code,
-optionally link a saved same-sport team, and record the official fantasy point
-totals for scheduled matchups.
+code plus separate commissioner and member keys once, join with the friend code,
+optionally link a saved same-sport team, and record or propose official fantasy
+point totals for scheduled matchups.
 
-League records use the `sports-hub-mini-league/1.1` schema and persist separately
-in `logs/sports-hub/mini-leagues.json`. Only SHA-256 hashes of the friend code
-and commissioner key are stored. Manager names and linked teams are unique
-within a league, leagues are capped at 12 managers, and membership locks after
-the first matchup result is recorded. Version 1.0 records migrate on read into a
-legacy-unclaimed state whose local commissioner access can be claimed once.
+League records use the `sports-hub-mini-league/1.2` schema and persist separately
+in `logs/sports-hub/mini-leagues.json`. Only SHA-256 hashes of the friend code,
+commissioner key, and member keys are stored. Manager names and linked teams are
+unique within a league, leagues are capped at 12 managers, and membership locks
+after the first approved matchup result is recorded. Version 1.0 records migrate
+into a commissioner-unclaimed state; version 1.1 members migrate into an access
+reissue state.
 
 Schedules use a deterministic round-robin rotation for the configured number of
 scoring periods. Standings are derived from completed matchup totals and ranked
@@ -231,9 +232,16 @@ audit window; corrections retain both the prior and replacement totals. The
 browser stores a successfully entered key in `sessionStorage` for convenience,
 never in the league API response or server persistence.
 
+Each manager receives a separate member key. It can submit a proposed score only
+for a matchup involving that manager. Proposals are bounded to 200 records and
+do not affect official results or standings until commissioner approval. A
+commissioner can reject a proposal, approve one while superseding competing
+pending proposals, replace any member key, or replace the commissioner key.
+
 Mini-league endpoints under `/api/sports-hub`:
 
-- `POST /mini-leagues` creates a league and returns both plaintext secrets once.
+- `POST /mini-leagues` creates a league and returns the three plaintext secrets
+  required by the creator once.
 - `GET /mini-leagues/status` reports the active authorization and storage
   adapters without claiming hosted readiness.
 - `GET /mini-leagues` lists local profile leagues without either secret hash.
@@ -243,8 +251,20 @@ Mini-league endpoints under `/api/sports-hub`:
   `X-Mini-League-Commissioner-Key` header.
 - `POST /mini-leagues/:leagueId/commissioner/claim` performs the one-time local
   migration claim for a legacy-unclaimed league.
+- `POST /mini-leagues/:leagueId/commissioner/rotate` replaces and revokes the
+  current commissioner key.
+- `POST /mini-leagues/:leagueId/member/verify` verifies the
+  `X-Mini-League-Member-Key` header and returns the matching manager identity.
+- `POST /mini-leagues/:leagueId/members/:memberId/access/rotate` replaces one
+  member key under commissioner authorization.
 - `POST /mini-leagues/:leagueId/join-code/rotate` invalidates the previous
   friend code and returns the replacement once.
+- `POST /mini-leagues/:leagueId/matchups/:matchupId/proposals` creates a pending
+  participant proposal without changing standings.
+- `PUT /mini-leagues/:leagueId/proposals/:proposalId` approves or rejects a
+  proposal under commissioner authorization.
+- `GET /mini-leagues/:leagueId/export` downloads a commissioner-authorized
+  `sports-hub-league-export/1.0` bundle with all access material removed.
 - `PUT /mini-leagues/:leagueId/scoring-periods/:period/lock` locks or unlocks a
   period using `{ "locked": true | false }`.
 - `PUT /mini-leagues/:leagueId/matchups/:matchupId/score` records or explicitly
@@ -252,8 +272,10 @@ Mini-league endpoints under `/api/sports-hub`:
   header.
 
 This phase is intentionally local and account-free. Friend codes are joining
-convenience, and commissioner keys are local capability credentials—not user
-accounts, identity proof, recovery, or multi-device sessions. The next hosted
-phase must connect per-user authentication and transactional storage before
-public invite links or payments. There are no automatic roster changes or live
-provider claims.
+convenience, and commissioner/member keys are local capability credentials—not
+user accounts, identity proof, recovery, or multi-device sessions. The next
+hosted phase must connect per-user authentication, Row Level Security, and
+transactional storage before public invite links or payments. There are no
+automatic roster changes or live provider claims. See
+[`docs/HOSTED_BETA_SETUP.md`](../../docs/HOSTED_BETA_SETUP.md) for the owner
+setup required to continue.

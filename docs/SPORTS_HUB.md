@@ -20,18 +20,21 @@ results retain their original scoring version and are not recalculated later.
 Recommendation details are excluded from check-in persistence.
 
 Mini-leagues provide explicit create and join flows for football, basketball,
-and soccer. A creator receives an unambiguous eight-character friend code and a
-separate commissioner key once; only their SHA-256 hashes are persisted.
+and soccer. A creator receives an unambiguous eight-character friend code, a
+commissioner key, and their own member key once; only their SHA-256 hashes are
+persisted. Each joining manager receives a separate member key once.
 Membership remains open until the first result is recorded. Deterministic
 round-robin matchups are regenerated whenever a manager joins before that lock.
 
-League standings are derived only from the official fantasy point totals a user
-enters for each matchup. Commissioner authorization is required to record or
-correct totals, rotate the friend code, and lock or unlock a completed scoring
-period. Corrections preserve the previous and replacement values in a bounded
-audit trail. Team Score never affects a win, loss, tie, points-for total, or
-rank. Manager Score and AI ranking remain uncalculated. This local MVP has no
-accounts, public invitations, payments, or automatic roster actions.
+League standings are derived only from approved official fantasy point totals.
+A manager key may propose totals only for a matchup that manager played, and a
+proposal never changes standings until commissioner approval. Commissioner
+authorization is required to approve or reject proposals, record or correct
+totals directly, rotate access, and lock or unlock a completed scoring period.
+Corrections and proposal decisions preserve audit receipts. Team Score never
+affects a win, loss, tie, points-for total, or rank. Manager Score and AI ranking
+remain uncalculated. This local MVP has no accounts, public invitations,
+payments, or automatic roster actions.
 
 ## What the numbers mean
 
@@ -58,10 +61,11 @@ again is idempotent.
 
 Mini-leagues use another independent atomic store at
 `logs/sports-hub/mini-leagues.json`, scoped to the default profile and bounded
-to 100 leagues. Friend-code and commissioner-key plaintext are never written to
-the store. The commissioner key is kept in browser `sessionStorage` only after
-creation or manual unlock, so it is a local convenience rather than a hosted
-account session.
+to 100 leagues. Friend-code, commissioner-key, and member-key plaintext are
+never written to the store. Successfully entered access keys are kept in
+browser `sessionStorage` only, so they remain local conveniences rather than
+hosted account sessions. Commissioner-authorized migration downloads explicitly
+exclude every access hash and require new hosted access to be issued.
 
 When image extraction is configured, users may upload a roster screenshot and
 review the visible names before saving. A separate deterministic identity step
