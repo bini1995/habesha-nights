@@ -1,8 +1,7 @@
 # AI Sports & Fantasy Hub
 
-This product provides a local-first Team Analyzer for fantasy football and
-basketball, then will support an internal mini-league and optional future AI
-assistance.
+This product provides a local-first Team Analyzer and private mini-leagues for
+fantasy football, basketball, and soccer, with optional future AI assistance.
 
 Sports data adapters, fantasy advice, league rules, and scoring will remain
 separate modules. Official league outcomes must be deterministic; AI output
@@ -203,17 +202,20 @@ The standard builder now uses a stable ID derived from sport, league, and team
 name so later analyses of that same team build one history. Changing those
 identifying fields intentionally starts a separate team timeline.
 
-## Phase 3H private mini-leagues
+## Phase 3H–3I private mini-leagues and commissioner controls
 
 The phone-first mini-league screen at `/sports-hub/leagues/` supports football,
-basketball, and soccer. A local user can create a league, receive a private code
-once, join with that code, optionally link a saved same-sport team, and record or
-correct the official fantasy point totals for scheduled matchups.
+basketball, and soccer. A local user can create a league, receive a friend join
+code and separate commissioner recovery key once, join with the friend code,
+optionally link a saved same-sport team, and record the official fantasy point
+totals for scheduled matchups.
 
-League records use the `sports-hub-mini-league/1.0` schema and persist separately
-in `logs/sports-hub/mini-leagues.json`. Only a SHA-256 join-code hash is stored.
-Manager names and linked teams are unique within a league, leagues are capped at
-12 managers, and membership locks after the first matchup result is recorded.
+League records use the `sports-hub-mini-league/1.1` schema and persist separately
+in `logs/sports-hub/mini-leagues.json`. Only SHA-256 hashes of the friend code
+and commissioner key are stored. Manager names and linked teams are unique
+within a league, leagues are capped at 12 managers, and membership locks after
+the first matchup result is recorded. Version 1.0 records migrate on read into a
+legacy-unclaimed state whose local commissioner access can be claimed once.
 
 Schedules use a deterministic round-robin rotation for the configured number of
 scoring periods. Standings are derived from completed matchup totals and ranked
@@ -221,15 +223,37 @@ by wins, ties, point differential, points for, and a stable name/ID fallback.
 Team Score does not affect standings. Manager Score and AI ranking are explicit
 reserved fields with `null` values.
 
+The commissioner key is required to record or correct a result, rotate the
+friend code, and lock or unlock a scoring period. A period can be locked only
+after all of its scheduled matchups have results. Result changes, code rotation,
+access claims, and period locks append plain-language events to a 500-entry
+audit window; corrections retain both the prior and replacement totals. The
+browser stores a successfully entered key in `sessionStorage` for convenience,
+never in the league API response or server persistence.
+
 Mini-league endpoints under `/api/sports-hub`:
 
-- `POST /mini-leagues` creates a league and returns the private join code once.
-- `GET /mini-leagues` lists local profile leagues without join-code hashes.
+- `POST /mini-leagues` creates a league and returns both plaintext secrets once.
+- `GET /mini-leagues/status` reports the active authorization and storage
+  adapters without claiming hosted readiness.
+- `GET /mini-leagues` lists local profile leagues without either secret hash.
 - `GET /mini-leagues/:leagueId` returns a league and derived standings.
 - `POST /mini-leagues/join` adds a manager before scoring begins.
+- `POST /mini-leagues/:leagueId/commissioner/verify` verifies the
+  `X-Mini-League-Commissioner-Key` header.
+- `POST /mini-leagues/:leagueId/commissioner/claim` performs the one-time local
+  migration claim for a legacy-unclaimed league.
+- `POST /mini-leagues/:leagueId/join-code/rotate` invalidates the previous
+  friend code and returns the replacement once.
+- `PUT /mini-leagues/:leagueId/scoring-periods/:period/lock` locks or unlocks a
+  period using `{ "locked": true | false }`.
 - `PUT /mini-leagues/:leagueId/matchups/:matchupId/score` records or explicitly
-  replaces both official point totals.
+  replaces both official point totals. Commissioner routes require the key
+  header.
 
-This phase is intentionally local and account-free. Private codes are joining
-convenience, not authentication credentials. There are no public invite links,
-payments, automatic roster changes, or live provider claims.
+This phase is intentionally local and account-free. Friend codes are joining
+convenience, and commissioner keys are local capability credentials—not user
+accounts, identity proof, recovery, or multi-device sessions. The next hosted
+phase must connect per-user authentication and transactional storage before
+public invite links or payments. There are no automatic roster changes or live
+provider claims.

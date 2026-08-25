@@ -45,10 +45,15 @@ Mini-leagues have their own versioned persistence and service boundary. Saved
 teams may be linked to members only when profile and sport match, but leagues do
 not import Team Score or recommendation data into matchups. A deterministic
 schedule is domain output, and standings are recalculated exclusively from
-entered official fantasy points. Join-code hashes are persisted; the plaintext
-code is returned only by the create operation. The current local profile is not
-an authentication system, so public sharing and multi-device hosting remain
-disabled until ownership and authorization are added.
+entered official fantasy points. Friend-code and commissioner-key hashes are
+persisted; plaintext secrets are returned only when created or rotated.
+Commissioner authorization protects scoring and settings, while period locks
+and a 500-entry audit window preserve local result integrity. Version 1.0 league
+records migrate to an explicitly unclaimed local state and may be claimed once.
+Authorization and persistence expose status interfaces for future adapters, but
+the current local profile and session key are not an authentication system.
+Public sharing and multi-device hosting remain disabled until hosted identity,
+ownership, recovery, and transactional storage are connected and tested.
 
 ### Opportunity Agent (Labs)
 

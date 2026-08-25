@@ -94,6 +94,12 @@
   round-robin schedules, manual official-point results, and derived standings.
 - [x] Add a phone-first league home with explicit create/join flows, one-time
   private codes, saved-team links, matchup entry, and score-separation copy.
+- [x] Require a separate one-time commissioner key for result and settings
+  changes, persist only its hash, and support browser-session unlocks.
+- [x] Add commissioner-controlled join-code rotation, completed-period locks,
+  explicit result corrections, and a bounded append-only audit trail.
+- [x] Migrate local version 1.0 leagues safely and expose provider-neutral
+  authorization and storage readiness without claiming hosted accounts.
 - Keep AI advice explainable and require confirmation for roster changes.
 
 ## Phase 4 — AI scoring and ranking
@@ -106,12 +112,12 @@
 
 ## Immediate next slice
 
-Prepare mini-leagues for use beyond one local device. Add authenticated profile
-and league ownership boundaries, role-based commissioner actions, join-code
-rotation, a score-change audit trail, scoring-period locks, and a migration path
-from the local JSON store to a hosted database. Preserve the current local mode
-for offline development and do not add payments until ownership, security,
-privacy, recovery, and entitlement tests are in place.
+Connect one authenticated identity provider and one hosted transactional store
+in a staging environment. Replace local capability-key convenience with
+per-user owner/member sessions, add explicit local export/import migration,
+commissioner recovery and revocation, member score proposals, rate limits, and
+authorization tests across two devices. Preserve offline local mode and do not
+add payments until those ownership, security, privacy, and recovery paths pass.
 
 In parallel, obtain written commercial-display and derived-score rights plus a
 development key before adding a real football network client. That client must

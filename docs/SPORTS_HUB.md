@@ -20,17 +20,18 @@ results retain their original scoring version and are not recalculated later.
 Recommendation details are excluded from check-in persistence.
 
 Mini-leagues provide explicit create and join flows for football, basketball,
-and soccer. A creator receives an unambiguous eight-character private code once;
-only its SHA-256 hash is persisted. Membership remains open until the first
-result is recorded. Deterministic round-robin matchups are regenerated whenever
-a manager joins before that lock.
+and soccer. A creator receives an unambiguous eight-character friend code and a
+separate commissioner key once; only their SHA-256 hashes are persisted.
+Membership remains open until the first result is recorded. Deterministic
+round-robin matchups are regenerated whenever a manager joins before that lock.
 
 League standings are derived only from the official fantasy point totals a user
-enters for each matchup. Those totals may be corrected explicitly, with the
-standings recalculated from the stored matchups. Team Score never affects a win,
-loss, tie, points-for total, or rank. Manager Score and AI ranking remain
-uncalculated. This local MVP has no accounts, public invitations, payments, or
-automatic roster actions.
+enters for each matchup. Commissioner authorization is required to record or
+correct totals, rotate the friend code, and lock or unlock a completed scoring
+period. Corrections preserve the previous and replacement values in a bounded
+audit trail. Team Score never affects a win, loss, tie, points-for total, or
+rank. Manager Score and AI ranking remain uncalculated. This local MVP has no
+accounts, public invitations, payments, or automatic roster actions.
 
 ## What the numbers mean
 
@@ -57,7 +58,10 @@ again is idempotent.
 
 Mini-leagues use another independent atomic store at
 `logs/sports-hub/mini-leagues.json`, scoped to the default profile and bounded
-to 100 leagues. Join-code plaintext is never written to the store.
+to 100 leagues. Friend-code and commissioner-key plaintext are never written to
+the store. The commissioner key is kept in browser `sessionStorage` only after
+creation or manual unlock, so it is a local convenience rather than a hosted
+account session.
 
 When image extraction is configured, users may upload a roster screenshot and
 review the visible names before saving. A separate deterministic identity step
