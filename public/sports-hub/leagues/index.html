@@ -28,8 +28,8 @@
       </header>
 
       <aside class="local-league-note" aria-label="Local MVP notice">
-        <strong>Local MVP</strong>
-        <span>No accounts yet. Leagues live on this device, and the private code is for joining—not account security.</span>
+        <strong>Account-ready local mode</strong>
+        <span>Commissioner actions now require a separate private key. Hosted accounts and multi-device sessions are not connected yet.</span>
       </aside>
 
       <section class="my-leagues" aria-labelledby="my-leagues-title">
@@ -107,12 +107,20 @@
       <aside id="invite-panel" class="invite-panel" hidden>
         <div>
           <p class="kicker">Shown once</p>
-          <h2>Invite your people.</h2>
-          <p>Keep this code private. Save it now—it cannot be viewed again.</p>
+          <h2>Save your private keys.</h2>
+          <p>The join code is for friends. The commissioner key controls results and league settings. Neither can be viewed again.</p>
         </div>
-        <div class="code-copy">
-          <strong id="invite-code"></strong>
-          <button id="copy-code" class="primary" type="button">Copy code</button>
+        <div class="secret-list">
+          <div id="join-code-secret" class="secret-row">
+            <span>Friend join code</span>
+            <strong id="invite-code"></strong>
+            <button id="copy-code" class="primary" type="button">Copy join code</button>
+          </div>
+          <div id="commissioner-key-secret" class="secret-row">
+            <span>Commissioner recovery key</span>
+            <strong id="commissioner-key-value"></strong>
+            <button id="copy-commissioner-key" class="quiet" type="button">Copy commissioner key</button>
+          </div>
         </div>
         <p id="copy-status" class="form-status" role="status" aria-live="polite"></p>
       </aside>
@@ -135,6 +143,29 @@
           <span>Manager / AI score <b>Not calculated</b></span>
         </div>
       </aside>
+
+      <section id="commissioner-panel" class="commissioner-panel" aria-labelledby="commissioner-title">
+        <div class="commissioner-heading">
+          <div>
+            <p class="kicker">League control</p>
+            <h2 id="commissioner-title">Commissioner desk</h2>
+          </div>
+          <span id="commissioner-state" class="count-pill">View only</span>
+        </div>
+        <p>Only the commissioner can record results, rotate the friend code, or lock a completed scoring period.</p>
+        <form id="commissioner-unlock" class="commissioner-unlock">
+          <label>Commissioner key
+            <input id="commissioner-key-input" type="password" autocomplete="off" placeholder="Paste your saved key" required>
+          </label>
+          <button class="quiet" type="submit">Unlock controls</button>
+        </form>
+        <button id="claim-commissioner" class="quiet" type="button" hidden>Claim legacy commissioner access</button>
+        <div id="commissioner-actions" class="commissioner-actions" hidden>
+          <button id="rotate-join-code" class="quiet" type="button">Rotate friend code</button>
+          <button id="toggle-period-lock" class="quiet" type="button">Lock period</button>
+        </div>
+        <p id="commissioner-status" class="form-status" role="status" aria-live="polite"></p>
+      </section>
 
       <div class="league-dashboard">
         <section class="standings-panel" aria-labelledby="standings-title">
@@ -175,6 +206,18 @@
         </div>
         <p id="score-status" class="league-status" role="status" aria-live="polite"></p>
         <div id="matchup-list" class="matchup-list"></div>
+      </section>
+
+      <section class="activity-panel" aria-labelledby="activity-title">
+        <div class="league-section-head compact-head">
+          <div>
+            <p class="kicker">Receipts</p>
+            <h2 id="activity-title">League activity</h2>
+          </div>
+          <span id="activity-count" class="count-pill"></span>
+        </div>
+        <p>Result corrections keep their previous and replacement point totals.</p>
+        <div id="activity-list" class="activity-list"></div>
       </section>
     </section>
   </main>

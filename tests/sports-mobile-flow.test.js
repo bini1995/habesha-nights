@@ -105,7 +105,7 @@ test("390px results save a check-in and open the team progress timeline", async 
   }
 });
 
-test("390px mini-league flow creates, joins, records a result, and updates standings", async () => {
+test("390px mini-league flow unlocks commissioner scoring and locks a completed period", async () => {
   const runtime = await testServer();
   let browser;
   try {
@@ -126,9 +126,11 @@ test("390px mini-league flow creates, joins, records a result, and updates stand
     await createForm.getByLabel("Your display name").fill("Avery");
     await createForm.getByLabel("Your saved team Optional").selectOption(football.id);
     await createForm.getByRole("button", { name: "Create private league" }).click();
-    await page.getByRole("heading", { name: "Invite your people." }).waitFor();
+    await page.getByRole("heading", { name: "Save your private keys." }).waitFor();
     const code = await page.locator("#invite-code").innerText();
+    const commissionerKey = await page.locator("#commissioner-key-value").innerText();
     assert.match(code, /^[A-HJ-NP-Z2-9]{8}$/);
+    assert.match(commissionerKey, /^[A-Za-z0-9_-]{32,128}$/);
 
     await page.getByRole("button", { name: "All leagues" }).click();
     const joinForm = page.locator("#join-league");
@@ -138,6 +140,13 @@ test("390px mini-league flow creates, joins, records a result, and updates stand
     await joinForm.getByRole("button", { name: "Join league" }).click();
     await page.getByText("2 managers · 14 scoring periods").waitFor();
 
+    await page.evaluate(() => sessionStorage.clear());
+    await page.reload();
+    await page.getByRole("button", { name: "Commissioner key required" }).waitFor();
+    await page.getByLabel("Commissioner key").fill(commissionerKey);
+    await page.getByRole("button", { name: "Unlock controls" }).click();
+    await page.getByText("Commissioner controls unlocked for this browser session.").waitFor();
+
     const matchup = page.locator(".matchup-card").first();
     await matchup.locator('input[name="homePoints"]').fill("121.5");
     await matchup.locator('input[name="awayPoints"]').fill("116.25");
@@ -146,6 +155,10 @@ test("390px mini-league flow creates, joins, records a result, and updates stand
     await page.getByText("Scoring started").waitFor();
     assert.match(await page.locator(".standings-list").innerText(), /1-0-0/);
     assert.match(await page.locator(".score-truth").innerText(), /never changes wins or losses/i);
+    await page.getByRole("button", { name: "Lock period 1" }).click();
+    await page.locator("#commissioner-status").getByText("Scoring period 1 locked.").waitFor();
+    assert.equal(await matchup.locator('input[name="homePoints"]').isDisabled(), true);
+    assert.match(await page.locator("#activity-list").innerText(), /Scoring period 1 locked/);
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       true

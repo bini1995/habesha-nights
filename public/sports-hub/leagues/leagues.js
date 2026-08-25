@@ -11,10 +11,32 @@ const createTeam = document.querySelector("#create-team");
 const joinTeam = document.querySelector("#join-team");
 const periodSelect = document.querySelector("#period-select");
 const matchupList = document.querySelector("#matchup-list");
+const commissionerState = document.querySelector("#commissioner-state");
+const commissionerUnlock = document.querySelector("#commissioner-unlock");
+const commissionerActions = document.querySelector("#commissioner-actions");
+const commissionerStatus = document.querySelector("#commissioner-status");
 
 let teams = [];
 let leagues = [];
 let currentLeague = null;
+let commissionerAuthorized = false;
+
+function commissionerStorageKey(leagueId) {
+  return `sports-hub-commissioner:${leagueId}`;
+}
+
+function commissionerKey() {
+  if (!currentLeague) return "";
+  return sessionStorage.getItem(commissionerStorageKey(currentLeague.id)) ?? "";
+}
+
+function saveCommissionerKey(leagueId, value) {
+  sessionStorage.setItem(commissionerStorageKey(leagueId), value);
+}
+
+function commissionerHeaders() {
+  return { "x-mini-league-commissioner-key": commissionerKey() };
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -39,7 +61,11 @@ function points(value) {
 async function requestJson(url, options) {
   const response = await fetch(url, options);
   const body = await response.json();
-  if (!response.ok) throw new Error(body.error || "Something went wrong.");
+  if (!response.ok) {
+    const error = new Error(body.error || "Something went wrong.");
+    error.status = response.status;
+    throw error;
+  }
   return body;
 }
 
@@ -113,8 +139,60 @@ function selectedPeriod() {
   return Number(periodSelect.value || 1);
 }
 
+function currentPeriodLocked() {
+  return currentLeague.lockedScoringPeriods.includes(selectedPeriod());
+}
+
+function renderCommissionerControls() {
+  const configured = currentLeague.commissionerAccessConfigured;
+  commissionerState.textContent = commissionerAuthorized
+    ? "Commissioner controls on"
+    : "View only";
+  commissionerState.classList.toggle("active", commissionerAuthorized);
+  commissionerUnlock.hidden = commissionerAuthorized || !configured;
+  document.querySelector("#claim-commissioner").hidden =
+    configured || commissionerAuthorized;
+  commissionerActions.hidden = !commissionerAuthorized;
+  const lockButton = document.querySelector("#toggle-period-lock");
+  lockButton.textContent = currentPeriodLocked()
+    ? `Unlock period ${selectedPeriod()}`
+    : `Lock period ${selectedPeriod()}`;
+}
+
+function activityMessage(event) {
+  if (event.type === "RESULT_RECORDED") {
+    return `Period ${event.scoringPeriod} result recorded: ${points(event.nextResult.homePoints)}–${points(event.nextResult.awayPoints)}.`;
+  }
+  if (event.type === "RESULT_CORRECTED") {
+    return `Period ${event.scoringPeriod} corrected from ${points(event.previousResult.homePoints)}–${points(event.previousResult.awayPoints)} to ${points(event.nextResult.homePoints)}–${points(event.nextResult.awayPoints)}.`;
+  }
+  if (event.type === "SCORING_PERIOD_LOCKED") {
+    return `Scoring period ${event.scoringPeriod} locked.`;
+  }
+  if (event.type === "SCORING_PERIOD_UNLOCKED") {
+    return `Scoring period ${event.scoringPeriod} unlocked.`;
+  }
+  if (event.type === "JOIN_CODE_ROTATED") {
+    return "Friend join code rotated. The previous code stopped working.";
+  }
+  return "Legacy commissioner access claimed.";
+}
+
+function renderActivity() {
+  const events = [...currentLeague.auditTrail].reverse();
+  document.querySelector("#activity-count").textContent =
+    `${events.length} ${events.length === 1 ? "change" : "changes"}`;
+  document.querySelector("#activity-list").innerHTML = events.length
+    ? events.map((event) => `<article class="activity-row">
+      <span class="activity-dot" aria-hidden="true"></span>
+      <span><strong>${escapeHtml(activityMessage(event))}</strong><time datetime="${escapeHtml(event.occurredAt)}">${escapeHtml(new Date(event.occurredAt).toLocaleString())}</time></span>
+    </article>`).join("")
+    : '<div class="matchup-empty"><strong>No commissioner changes yet.</strong><p>Recorded results and settings changes will appear here.</p></div>';
+}
+
 function renderMatchups() {
   const period = selectedPeriod();
+  const periodLocked = currentPeriodLocked();
   const matchups = currentLeague.matchups.filter((matchup) =>
     matchup.scoringPeriod === period);
   if (currentLeague.members.length < 2) {
@@ -127,16 +205,17 @@ function renderMatchups() {
   }
   matchupList.innerHTML = matchups.map((matchup) => {
     const scored = Boolean(matchup.scoredAt);
-    return `<form class="matchup-card score-form" data-matchup-id="${escapeHtml(matchup.id)}">
-      <div class="matchup-number">Period ${matchup.scoringPeriod}</div>
+    const disabled = !commissionerAuthorized || periodLocked;
+    return `<form class="matchup-card score-form${periodLocked ? " locked" : ""}" data-matchup-id="${escapeHtml(matchup.id)}">
+      <div class="matchup-number">Period ${matchup.scoringPeriod}${periodLocked ? " · Locked" : ""}</div>
       <label><span>${escapeHtml(managerName(matchup.homeMemberId))}</span><small>Official points</small>
-        <input name="homePoints" inputmode="decimal" type="number" min="0" max="10000" step="0.01" value="${scored ? escapeHtml(matchup.homePoints) : ""}" placeholder="0.00" required>
+        <input name="homePoints" inputmode="decimal" type="number" min="0" max="10000" step="0.01" value="${scored ? escapeHtml(matchup.homePoints) : ""}" placeholder="0.00" ${disabled ? "disabled" : ""} required>
       </label>
       <span class="versus" aria-hidden="true">vs</span>
       <label><span>${escapeHtml(managerName(matchup.awayMemberId))}</span><small>Official points</small>
-        <input name="awayPoints" inputmode="decimal" type="number" min="0" max="10000" step="0.01" value="${scored ? escapeHtml(matchup.awayPoints) : ""}" placeholder="0.00" required>
+        <input name="awayPoints" inputmode="decimal" type="number" min="0" max="10000" step="0.01" value="${scored ? escapeHtml(matchup.awayPoints) : ""}" placeholder="0.00" ${disabled ? "disabled" : ""} required>
       </label>
-      <button class="${scored ? "quiet" : "primary"}" type="submit">${scored ? "Update result" : "Record result"}</button>
+      <button class="${scored ? "quiet" : "primary"}" type="submit" ${disabled ? "disabled" : ""}>${periodLocked ? "Period locked" : commissionerAuthorized ? (scored ? "Update result" : "Record result") : "Commissioner key required"}</button>
       ${scored ? `<small class="recorded-label">Recorded ${escapeHtml(new Date(matchup.scoredAt).toLocaleString())}</small>` : ""}
     </form>`;
   }).join("");
@@ -145,8 +224,26 @@ function renderMatchups() {
   });
 }
 
-function renderLeague(league, joinCode) {
+function showPrivateSecrets({ joinCode, commissionerKey: newCommissionerKey } = {}) {
+  const invitePanel = document.querySelector("#invite-panel");
+  const joinSecret = document.querySelector("#join-code-secret");
+  const commissionerSecret = document.querySelector("#commissioner-key-secret");
+  joinSecret.hidden = !joinCode;
+  commissionerSecret.hidden = !newCommissionerKey;
+  invitePanel.hidden = !joinCode && !newCommissionerKey;
+  if (joinCode) document.querySelector("#invite-code").textContent = joinCode;
+  if (newCommissionerKey) {
+    document.querySelector("#commissioner-key-value").textContent =
+      newCommissionerKey;
+  }
+}
+
+function renderLeague(league, privateSecrets = {}) {
   currentLeague = league;
+  if (privateSecrets.commissionerKey) {
+    saveCommissionerKey(league.id, privateSecrets.commissionerKey);
+  }
+  commissionerAuthorized = Boolean(commissionerKey());
   leagueHub.hidden = true;
   leagueHome.hidden = false;
   history.replaceState(null, "", `?leagueId=${encodeURIComponent(league.id)}`);
@@ -156,17 +253,41 @@ function renderLeague(league, joinCode) {
     `${league.members.length} ${league.members.length === 1 ? "manager" : "managers"} · ${league.scoringPeriodCount} scoring periods`;
   document.querySelector("#league-state").textContent =
     league.status === "IN_PROGRESS" ? "Scoring started" : "Open to join";
-  const invitePanel = document.querySelector("#invite-panel");
-  invitePanel.hidden = !joinCode;
-  if (joinCode) document.querySelector("#invite-code").textContent = joinCode;
+  showPrivateSecrets(privateSecrets);
   periodSelect.innerHTML = Array.from({ length: league.scoringPeriodCount }, (_, index) =>
     `<option value="${index + 1}">Period ${index + 1}</option>`).join("");
   const next = league.matchups.find((matchup) => !matchup.scoredAt);
   periodSelect.value = String(next?.scoringPeriod ?? league.matchups.at(-1)?.scoringPeriod ?? 1);
   renderStandings();
   renderMembers();
+  renderCommissionerControls();
   renderMatchups();
+  renderActivity();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function verifyStoredCommissioner() {
+  if (!commissionerKey()) {
+    commissionerAuthorized = false;
+    renderCommissionerControls();
+    renderMatchups();
+    return;
+  }
+  try {
+    await requestJson(
+      `/api/sports-hub/mini-leagues/${encodeURIComponent(currentLeague.id)}/commissioner/verify`,
+      { method: "POST", headers: commissionerHeaders() }
+    );
+    commissionerAuthorized = true;
+  } catch (error) {
+    commissionerAuthorized = false;
+    if (error.status === 403) {
+      sessionStorage.removeItem(commissionerStorageKey(currentLeague.id));
+      commissionerStatus.textContent = "The saved commissioner key is no longer valid.";
+    }
+  }
+  renderCommissionerControls();
+  renderMatchups();
 }
 
 async function openLeague(leagueId) {
@@ -176,6 +297,7 @@ async function openLeague(leagueId) {
       `/api/sports-hub/mini-leagues/${encodeURIComponent(leagueId)}`
     );
     renderLeague(body.league);
+    await verifyStoredCommissioner();
   } catch (error) {
     leagueStatus.textContent = error.message;
   }
@@ -193,7 +315,10 @@ async function submitScore(event) {
       `/api/sports-hub/mini-leagues/${encodeURIComponent(currentLeague.id)}/matchups/${encodeURIComponent(form.dataset.matchupId)}/score`,
       {
         method: "PUT",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...commissionerHeaders()
+        },
         body: JSON.stringify({
           homePoints: data.get("homePoints"),
           awayPoints: data.get("awayPoints")
@@ -208,15 +333,28 @@ async function submitScore(event) {
     document.querySelector("#score-status").textContent =
       "Result recorded. Standings updated.";
     renderStandings();
+    renderCommissionerControls();
     renderMatchups();
+    renderActivity();
   } catch (error) {
     document.querySelector("#score-status").textContent = error.message;
+    if (error.status === 403) {
+      commissionerAuthorized = false;
+      sessionStorage.removeItem(commissionerStorageKey(currentLeague.id));
+      commissionerStatus.textContent =
+        "Commissioner access expired. Unlock the controls again.";
+      renderCommissionerControls();
+      renderMatchups();
+    }
     button.disabled = false;
   }
 }
 
 createSport.addEventListener("change", populateTeams);
-periodSelect.addEventListener("change", renderMatchups);
+periodSelect.addEventListener("change", () => {
+  renderCommissionerControls();
+  renderMatchups();
+});
 
 createForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -238,7 +376,10 @@ createForm.addEventListener("submit", async (event) => {
       })
     });
     leagues = [body.league, ...leagues];
-    renderLeague(body.league, body.joinCode);
+    renderLeague(body.league, {
+      commissionerKey: body.commissionerKey,
+      joinCode: body.joinCode
+    });
   } catch (error) {
     status.textContent = error.message;
     button.disabled = false;
@@ -271,6 +412,108 @@ joinForm.addEventListener("submit", async (event) => {
   }
 });
 
+commissionerUnlock.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = document.querySelector("#commissioner-key-input");
+  const button = commissionerUnlock.querySelector("button[type=submit]");
+  const key = input.value.trim();
+  commissionerStatus.textContent = "Checking commissioner access…";
+  button.disabled = true;
+  try {
+    await requestJson(
+      `/api/sports-hub/mini-leagues/${encodeURIComponent(currentLeague.id)}/commissioner/verify`,
+      {
+        method: "POST",
+        headers: { "x-mini-league-commissioner-key": key }
+      }
+    );
+    saveCommissionerKey(currentLeague.id, key);
+    commissionerAuthorized = true;
+    input.value = "";
+    commissionerStatus.textContent =
+      "Commissioner controls unlocked for this browser session.";
+    renderCommissionerControls();
+    renderMatchups();
+  } catch (error) {
+    commissionerStatus.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#claim-commissioner").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  commissionerStatus.textContent = "Creating a commissioner key for this legacy league…";
+  button.disabled = true;
+  try {
+    const body = await requestJson(
+      `/api/sports-hub/mini-leagues/${encodeURIComponent(currentLeague.id)}/commissioner/claim`,
+      { method: "POST" }
+    );
+    leagues = leagues.map((league) =>
+      league.id === body.league.id ? body.league : league);
+    commissionerStatus.textContent =
+      "Commissioner access claimed. Save the recovery key now.";
+    renderLeague(body.league, { commissionerKey: body.commissionerKey });
+  } catch (error) {
+    commissionerStatus.textContent = error.message;
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#rotate-join-code").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  commissionerStatus.textContent = "Rotating the friend code…";
+  button.disabled = true;
+  try {
+    const body = await requestJson(
+      `/api/sports-hub/mini-leagues/${encodeURIComponent(currentLeague.id)}/join-code/rotate`,
+      { method: "POST", headers: commissionerHeaders() }
+    );
+    leagues = leagues.map((league) =>
+      league.id === body.league.id ? body.league : league);
+    commissionerStatus.textContent =
+      "Friend code rotated. The previous code no longer works.";
+    renderLeague(body.league, { joinCode: body.joinCode });
+  } catch (error) {
+    commissionerStatus.textContent = error.message;
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#toggle-period-lock").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const period = selectedPeriod();
+  const locked = !currentPeriodLocked();
+  commissionerStatus.textContent =
+    `${locked ? "Locking" : "Unlocking"} scoring period ${period}…`;
+  button.disabled = true;
+  try {
+    const body = await requestJson(
+      `/api/sports-hub/mini-leagues/${encodeURIComponent(currentLeague.id)}/scoring-periods/${period}/lock`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          ...commissionerHeaders()
+        },
+        body: JSON.stringify({ locked })
+      }
+    );
+    currentLeague = body.league;
+    leagues = leagues.map((league) =>
+      league.id === body.league.id ? body.league : league);
+    commissionerStatus.textContent =
+      `Scoring period ${period} ${locked ? "locked" : "unlocked"}.`;
+    renderCommissionerControls();
+    renderMatchups();
+    renderActivity();
+  } catch (error) {
+    commissionerStatus.textContent = error.message;
+    button.disabled = false;
+  }
+});
+
 document.querySelector("#back-to-leagues").addEventListener("click", () => {
   leagueHome.hidden = true;
   leagueHub.hidden = false;
@@ -287,6 +530,18 @@ document.querySelector("#copy-code").addEventListener("click", async () => {
     status.textContent = "League code copied.";
   } catch {
     status.textContent = "Select and copy the code above.";
+  }
+});
+
+document.querySelector("#copy-commissioner-key").addEventListener("click", async () => {
+  const status = document.querySelector("#copy-status");
+  try {
+    await navigator.clipboard.writeText(
+      document.querySelector("#commissioner-key-value").textContent
+    );
+    status.textContent = "Commissioner key copied. Store it somewhere private.";
+  } catch {
+    status.textContent = "Select and copy the commissioner key above.";
   }
 });
 
