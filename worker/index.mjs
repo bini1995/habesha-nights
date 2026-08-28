@@ -1,5 +1,6 @@
 const EVENT_SELECT = "id,slug,title,summary,description,starts_at,ends_at,image_url,ticket_url,ticket_price_cents,ticket_price_label,featured,promoted,cities!inner(id,name,slug,short_code),event_categories!inner(id,name,slug),venues(id,name,address,neighborhood),organizers(id,name,instagram,website,verified)";
 const SOURCES = new Set(["instagram", "tiktok", "google", "organizer", "whatsapp", "direct", "other"]);
+const FALLBACK_ASSET_ORIGIN = "https://raw.githubusercontent.com/bini1995/habesha-nights/1328777dfbb5547ae32be07343ea9ca38b52039e/public";
 
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -316,8 +317,19 @@ async function handleAdminApi(request, env, url, segments) {
 
 async function serveAsset(request, env, url) {
   const target = url.pathname === "/" ? "/index.html" : url.pathname === "/admin" ? "/admin/index.html" : url.pathname;
-  let response = await env.ASSETS.fetch(new Request(new URL(target, url), request));
-  if (response.status === 404 && !target.includes(".")) response = await env.ASSETS.fetch(new Request(new URL("/index.html", url), request));
+  const fetchAsset = async (pathname) => {
+    if (env.ASSETS) return env.ASSETS.fetch(new Request(new URL(pathname, url), request));
+    const upstream = await fetch(`${FALLBACK_ASSET_ORIGIN}${pathname}`);
+    if (!upstream.ok) return upstream;
+    const headers = new Headers(upstream.headers);
+    const extension = pathname.split(".").pop();
+    const contentType = { html: "text/html; charset=utf-8", css: "text/css; charset=utf-8", js: "application/javascript; charset=utf-8", png: "image/png" }[extension];
+    if (contentType) headers.set("content-type", contentType);
+    headers.set("cache-control", "public, max-age=300");
+    return new Response(upstream.body, { status: upstream.status, headers });
+  };
+  let response = await fetchAsset(target);
+  if (response.status === 404 && !target.includes(".")) response = await fetchAsset("/index.html");
   if (target === "/index.html" && response.ok) {
     const html = (await response.text()).replaceAll("__SITE_ORIGIN__", url.origin);
     return new Response(html, { status: response.status, headers: { ...Object.fromEntries(response.headers), "content-type": "text/html; charset=utf-8" } });
