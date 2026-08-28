@@ -1,6 +1,5 @@
 const EVENT_SELECT = "id,slug,title,summary,description,starts_at,ends_at,image_url,ticket_url,ticket_price_cents,ticket_price_label,featured,promoted,cities!inner(id,name,slug,short_code),event_categories!inner(id,name,slug),venues(id,name,address,neighborhood),organizers(id,name,instagram,website,verified)";
 const SOURCES = new Set(["instagram", "tiktok", "google", "organizer", "whatsapp", "direct", "other"]);
-const requestBuckets = new Map();
 
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -104,13 +103,12 @@ function promotionInput(input) {
   };
 }
 
-function limit(request, maximum = 5, windowMs = 60 * 60 * 1000) {
-  const now = Date.now();
-  const key = request.headers.get("cf-connecting-ip") || "unknown";
-  const recent = (requestBuckets.get(key) || []).filter((time) => now - time < windowMs);
-  if (recent.length >= maximum) throw httpError("Too many requests. Please try again later.", 429);
-  recent.push(now);
-  requestBuckets.set(key, recent);
+async function limit(request, env) {
+  if (!env.SUBMISSION_RATE_LIMITER) return;
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const pathname = new URL(request.url).pathname;
+  const { success } = await env.SUBMISSION_RATE_LIMITER.limit({ key: `${ip}:${pathname}` });
+  if (!success) throw httpError("Too many requests. Please try again later.", 429);
 }
 
 async function database(env, path, options = {}) {
@@ -212,7 +210,7 @@ async function handlePublicApi(request, env, url, segments) {
     return json({ recorded: true }, 201);
   }
   if (segments[1] === "events" && segments[2] && segments[3] === "claims" && request.method === "POST") {
-    limit(request, 3);
+    await limit(request, env);
     const row = await getEventRow(env, clean(segments[2], 220), "id");
     if (!row) return json({ error: "Event not found." }, 404);
     const rows = await database(env, "/rest/v1/event_claims?select=id,status", { method: "POST", prefer: "return=representation", body: { event_id: row.id, ...claimInput(await bodyJson(request)), status: "pending" } });
@@ -232,7 +230,7 @@ async function handlePublicApi(request, env, url, segments) {
     return json({ cities, categories });
   }
   if (url.pathname === "/api/submissions" && request.method === "POST") {
-    limit(request);
+    await limit(request, env);
     const form = await request.formData();
     const input = submissionInput(Object.fromEntries(form.entries()));
     const id = crypto.randomUUID();
@@ -251,7 +249,7 @@ async function handlePublicApi(request, env, url, segments) {
     return json({ submission: rows[0], message: "Your event is pending review." }, 201);
   }
   if (url.pathname === "/api/promotion-requests" && request.method === "POST") {
-    limit(request, 3);
+    await limit(request, env);
     const rows = await database(env, "/rest/v1/promotion_requests?select=id,status", { method: "POST", prefer: "return=representation", body: { ...promotionInput(await bodyJson(request)), status: "pending" } });
     return json({ request: rows[0], message: "We’ll follow up about featured placement." }, 201);
   }

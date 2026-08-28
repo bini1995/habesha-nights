@@ -46,7 +46,8 @@ Approved event appears publicly
 - Public catalog that returns approved upcoming events only
 - NYC and DMV reference records, eight launch categories, and 30 source-checked upcoming launch events—but no fake events
 - Row Level Security and revoked browser access on every application table
-- A Cloudflare Worker production adapter that preserves the Express application’s public API, admin, upload, approval, and redirect behavior for OpenAI Sites hosting
+- A Cloudflare Worker production adapter that preserves the Express application’s public API, admin, upload, approval, and redirect behavior
+- Cloudflare static assets, native submission rate limiting, and production observability configured in `wrangler.jsonc`
 
 The server uses a Supabase secret key and never sends it to browser code. Organizer contact data, submissions, and click records are only available through the token-protected server admin API.
 
@@ -69,7 +70,7 @@ tests/                    HTTP, validation, and service tests
 
 ## Local setup
 
-Requirements: Node.js 20+, Docker, and npm.
+Requirements: Node.js 22+, Docker, and npm.
 
 ```bash
 npm install
@@ -108,18 +109,19 @@ docker compose config -q
 
 The database test requires the local Supabase stack. It verifies all 11 tables, reference seeds, the flyer bucket, RLS foundation, and the complete pending-to-approved transaction.
 
-## Hosted Supabase and Sites launch
+## Hosted Supabase and Cloudflare launch
 
 1. Create a Supabase project.
 2. Link it using the project reference shown in the Supabase dashboard.
 3. Apply the tracked migration with `npx supabase db push`.
-4. Set the Sites runtime variables from `.env.example`: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_FLYER_BUCKET`, `ADMIN_TOKEN`, and `CLICK_HASH_SALT`.
-5. Use a Supabase secret key when available; the legacy service-role key remains supported for older projects.
-6. Keep both key types server-only and keep `.env` untracked.
+4. Set the private runtime values with `npx wrangler secret put SUPABASE_SECRET_KEY`, `npx wrangler secret put ADMIN_TOKEN`, and `npx wrangler secret put CLICK_HASH_SALT`.
+5. Confirm the non-secret Supabase URL and flyer bucket in `wrangler.jsonc`, then deploy with `npx wrangler deploy`.
+6. Use a Supabase secret key when available; the legacy service-role key remains supported for older projects.
+7. Keep both key types server-only and keep `.env` untracked.
 
 The public browser does not connect directly to Supabase. This keeps moderation data and organizer contact details behind the application server and lets the database deny `anon` and `authenticated` table access.
 
-The production build uses `@openai/sites-vite-plugin` and the Cloudflare worker in `worker/`. The local Node/Express server remains the fastest development workflow and shares the same database contract.
+The production deployment serves `public/` through the Cloudflare Worker in `worker/`. The local Node/Express server remains the fastest development workflow and shares the same database contract.
 
 ## Operating the first marketplace
 
