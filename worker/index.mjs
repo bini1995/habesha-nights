@@ -6,6 +6,12 @@ function json(value, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
 
+function searchFiles(url) {
+  if (url.pathname === "/robots.txt") return new Response(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: ${url.origin}/sitemap.xml\n`, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
+  if (url.pathname === "/sitemap.xml") return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${url.origin}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url></urlset>`, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=3600" } });
+  return null;
+}
+
 function httpError(message, status = 400) {
   const error = new Error(message);
   error.status = status;
@@ -341,6 +347,8 @@ async function handle(request, env) {
   const url = new URL(request.url);
   const segments = url.pathname.split("/").filter(Boolean);
   if (url.pathname === "/health") return json({ status: "ok", database: env.SUPABASE_URL && env.SUPABASE_SECRET_KEY ? "configured" : "not-configured" });
+  const searchFile = searchFiles(url);
+  if (searchFile) return searchFile;
   if (segments[0] === "api" && segments[1] === "admin") return handleAdminApi(request, env, url, segments);
   if (segments[0] === "api") return handlePublicApi(request, env, url, segments);
   if (segments[0] === "go" && segments[1] && request.method === "GET") {

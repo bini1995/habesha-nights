@@ -11,6 +11,8 @@ const knownSources = new Set(["instagram", "tiktok", "google", "organizer", "wha
 const source = knownSources.has((launchParams.get("source") || launchParams.get("utm_source") || "").toLowerCase())
   ? (launchParams.get("source") || launchParams.get("utm_source")).toLowerCase()
   : "";
+const requestedEvent = launchParams.get("event") || "";
+const defaultTitle = document.title;
 const visitorId = (() => {
   try {
     const existing = localStorage.getItem("hn_visitor_id");
@@ -74,6 +76,33 @@ async function loadReferenceData() {
   }
 }
 
+function eventUrl(slug, attributedSource = source) {
+  const url = new URL(window.location.href);
+  url.pathname = "/";
+  url.hash = "";
+  url.search = "";
+  url.searchParams.set("event", slug);
+  if (attributedSource) url.searchParams.set("source", attributedSource);
+  return url;
+}
+
+async function openEvent(slug, updateHistory = true) {
+  try {
+    const { event } = await api(`/api/events/${encodeURIComponent(slug)}`);
+    api(`/api/events/${encodeURIComponent(event.slug)}/view`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitor_id: visitorId, source, referrer: document.referrer }) }).catch(() => {});
+    const tracking = source ? `?source=${encodeURIComponent(source)}` : "";
+    const tickets = event.hasTickets ? `<a class="primary" href="/go/${encodeURIComponent(event.slug)}${tracking}" target="_blank" rel="noopener">View tickets ↗</a>` : '<button class="primary disabled" type="button" disabled>Tickets not listed</button>';
+    const image = event.imageUrl ? `<img class="detail-image" src="${escapeHtml(event.imageUrl)}" alt="Event flyer for ${escapeHtml(event.title)}">` : "";
+    document.querySelector("#event-detail").innerHTML = `${image}<p class="eyebrow dark">${escapeHtml(event.city)} · ${escapeHtml(event.category)}</p><h2>${escapeHtml(event.title)}</h2><p class="dialog-date">${formatDate(event.startsAt)} · ${escapeHtml(event.priceLabel || "See organizer")}</p><p>${escapeHtml(event.description)}</p><div class="detail-box"><strong>${escapeHtml(event.venue?.name || "Venue coming soon")}</strong><span>${escapeHtml(event.venue?.address || event.city)}</span></div><p class="organizer">Presented by <strong>${escapeHtml(event.organizer?.name || "Independent organizer")}</strong></p><div class="detail-actions">${tickets}<button class="share-button" type="button" data-share-event="${escapeHtml(event.slug)}" data-event-title="${escapeHtml(event.title)}">Share event</button><button class="claim-button" type="button" data-claim-event="${escapeHtml(event.slug)}" data-event-title="${escapeHtml(event.title)}">Claim this event</button></div>`;
+    document.querySelector("#share-status").textContent = "";
+    document.title = `${event.title} — Habesha Nights`;
+    if (updateHistory) history.pushState({ event: event.slug }, "", eventUrl(event.slug));
+    if (!eventDialog.open) eventDialog.showModal();
+  } catch {
+    eventState.textContent = "That event could not be opened.";
+  }
+}
+
 document.querySelectorAll("[data-city]").forEach((button) => button.addEventListener("click", () => {
   document.querySelectorAll("[data-city]").forEach((item) => item.classList.remove("active"));
   button.classList.add("active");
@@ -87,24 +116,34 @@ document.querySelector("[name=query]").addEventListener("input", (event) => {
   searchTimer = setTimeout(() => { state.query = event.target.value; loadEvents(); }, 220);
 });
 
-eventGrid.addEventListener("click", async (click) => {
+eventGrid.addEventListener("click", (click) => {
   const button = click.target.closest("[data-event]");
   if (!button) return;
-  try {
-    const { event } = await api(`/api/events/${encodeURIComponent(button.dataset.event)}`);
-    api(`/api/events/${encodeURIComponent(event.slug)}/view`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitor_id: visitorId, source, referrer: document.referrer }) }).catch(() => {});
-    const tracking = source ? `?source=${encodeURIComponent(source)}` : "";
-    const tickets = event.hasTickets ? `<a class="primary" href="/go/${encodeURIComponent(event.slug)}${tracking}" target="_blank" rel="noopener">View tickets ↗</a>` : '<button class="primary disabled" type="button" disabled>Tickets not listed</button>';
-    const image = event.imageUrl ? `<img class="detail-image" src="${escapeHtml(event.imageUrl)}" alt="Event flyer for ${escapeHtml(event.title)}">` : "";
-    document.querySelector("#event-detail").innerHTML = `${image}<p class="eyebrow dark">${escapeHtml(event.city)} · ${escapeHtml(event.category)}</p><h2>${escapeHtml(event.title)}</h2><p class="dialog-date">${formatDate(event.startsAt)} · ${escapeHtml(event.priceLabel || "See organizer")}</p><p>${escapeHtml(event.description)}</p><div class="detail-box"><strong>${escapeHtml(event.venue?.name || "Venue coming soon")}</strong><span>${escapeHtml(event.venue?.address || event.city)}</span></div><p class="organizer">Presented by <strong>${escapeHtml(event.organizer?.name || "Independent organizer")}</strong></p><div class="detail-actions">${tickets}<button class="claim-button" type="button" data-claim-event="${escapeHtml(event.slug)}" data-event-title="${escapeHtml(event.title)}">Claim this event</button></div>`;
-    eventDialog.showModal();
-  } catch { eventState.textContent = "That event could not be opened."; }
+  openEvent(button.dataset.event);
 });
 
 document.querySelectorAll("dialog .close").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+eventDialog.addEventListener("close", () => {
+  document.title = defaultTitle;
+  const url = new URL(window.location.href);
+  if (url.searchParams.delete("event")) history.replaceState({}, "", url);
+});
+window.addEventListener("popstate", () => {
+  const slug = new URLSearchParams(window.location.search).get("event");
+  if (slug) openEvent(slug, false);
+  else if (eventDialog.open) eventDialog.close();
+});
 document.querySelectorAll("[data-open-submit]").forEach((button) => button.addEventListener("click", () => submitDialog.showModal()));
 document.querySelectorAll("[data-open-promotion]").forEach((button) => button.addEventListener("click", () => promotionDialog.showModal()));
 document.querySelector("#event-detail").addEventListener("click", (click) => {
+  const share = click.target.closest("[data-share-event]");
+  if (share) {
+    const url = eventUrl(share.dataset.shareEvent, source || "direct").toString();
+    const status = document.querySelector("#share-status");
+    if (navigator.share) navigator.share({ title: share.dataset.eventTitle, text: `See ${share.dataset.eventTitle} on Habesha Nights`, url }).catch(() => {});
+    else navigator.clipboard.writeText(url).then(() => { status.textContent = "Event link copied."; }).catch(() => { status.textContent = url; });
+    return;
+  }
   const button = click.target.closest("[data-claim-event]");
   if (!button) return;
   eventDialog.close();
@@ -175,4 +214,4 @@ api("/api/businesses").then(({ businesses }) => {
 }).catch(() => {});
 
 loadReferenceData();
-loadEvents();
+loadEvents().then(() => { if (requestedEvent) openEvent(requestedEvent, false); });

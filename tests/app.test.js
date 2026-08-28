@@ -41,7 +41,10 @@ test("approved events and reference data are public", () => withServer(async (ba
   assert.equal((await (await fetch(`${base}/api/reference-data`)).json()).cities.length, 1);
   const page = await (await fetch(`${base}/`)).text();
   assert.match(page, new RegExp(`${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/og\\.png`));
+  assert.match(page, new RegExp(`<link rel="canonical" href="${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/">`));
   assert.doesNotMatch(page, /__SITE_ORIGIN__/);
+  assert.match(await (await fetch(`${base}/robots.txt`)).text(), new RegExp(`Sitemap: ${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/sitemap\\.xml`));
+  assert.match(await (await fetch(`${base}/sitemap.xml`)).text(), new RegExp(`<loc>${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/</loc>`));
 }));
 
 test("organizer submission enters pending moderation", () => withServer(async (base) => {

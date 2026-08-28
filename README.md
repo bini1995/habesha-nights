@@ -48,6 +48,7 @@ Approved event appears publicly
 - Row Level Security and revoked browser access on every application table
 - A Cloudflare Worker production adapter that preserves the Express application’s public API, admin, upload, approval, and redirect behavior
 - Cloudflare static assets, native submission rate limiting, and production observability configured in `wrangler.jsonc`
+- Shareable event deep links, a general social share flow, canonical metadata, structured data, `robots.txt`, and a production sitemap
 
 The server uses a Supabase secret key and never sends it to browser code. Organizer contact data, submissions, and click records are only available through the token-protected server admin API.
 
@@ -139,6 +140,8 @@ After launch, stop adding major features and run the validation sprint:
 The first 30 listings are tracked in `supabase/migrations/20260828020000_verified_launch_events.sql` with a source URL and source-check timestamp. Recheck dates and ticket availability before each weekly send; real event details can change after publication.
 
 Do not add accounts, native apps, social features, integrated payments, recommendations, AI, or owned ticketing until this organizer loop is working repeatedly.
+
+The two-week operating cadence, campaign-link format, outreach copy, and validation scoreboard live in [`docs/TRACTION_SPRINT.md`](docs/TRACTION_SPRINT.md).
 
 ## Share-card asset
 

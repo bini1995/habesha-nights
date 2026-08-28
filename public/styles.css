@@ -102,7 +102,9 @@ dialog form label{display:grid;gap:6px;font-size:.75rem;font-weight:850}
 .detail-box span{color:var(--muted)}
 .organizer{font-size:.87rem}
 .detail-actions{align-items:center;margin-top:22px}
-.claim-button{border:1px solid var(--green);border-radius:99px;background:transparent;color:var(--green);padding:13px 18px;font-weight:850;cursor:pointer}
+.claim-button,.share-button{border:1px solid var(--green);border-radius:99px;background:transparent;color:var(--green);padding:13px 18px;font-weight:850;cursor:pointer}
+.share-button{border-color:var(--line);color:var(--ink)}
+.share-status{min-height:20px;margin:16px 0 0!important;color:var(--green)!important;font-size:.78rem;font-weight:800}
 .compact-dialog{width:min(680px,calc(100% - 28px))}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 [hidden]{display:none!important}
