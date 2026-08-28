@@ -1,13 +1,14 @@
 {
-  "name": "nyc-opportunity-agent",
+  "name": "habesha-nights",
   "version": "1.0.0",
-  "description": "",
+  "description": "Ethiopian and Eritrean-adjacent diaspora events discovery for NYC and the DC/DMV.",
   "main": "index.js",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check index.js && node --check services/providers/index.js && node --check services/providers/amc.js && node --check services/monitor.js && node --check services/watch-service.js && node --check services/dashboard.js && node --check routes/watches.js && node --check products/event-finder/index.js && node --check products/event-finder/domain/event.js && node --check products/event-finder/domain/calendar.js && node --check products/event-finder/domain/preferences.js && node --check products/event-finder/domain/recommendations.js && node --check products/event-finder/services/source-registry.js && node --check products/event-finder/services/catalog-store.js && node --check products/event-finder/services/atomic-json-store.js && node --check products/event-finder/services/preferences-store.js && node --check products/event-finder/services/saved-events-store.js && node --check products/event-finder/services/quality-store.js && node --check products/event-finder/services/quality-history-store.js && node --check products/event-finder/sources/nyc-parks.js && node --check products/sports-hub/index.js && node --check products/sports-hub/domain/league.js && node --check products/sports-hub/domain/models.js && node --check products/sports-hub/domain/player-data.js && node --check products/sports-hub/domain/player-identity.js && node --check products/sports-hub/domain/team-analysis.js && node --check products/sports-hub/domain/team-check-in.js && node --check products/sports-hub/domain/import-adapter.js && node --check products/sports-hub/domain/import-schema.js && node --check products/sports-hub/services/atomic-json-store.js && node --check products/sports-hub/services/team-store.js && node --check products/sports-hub/services/entitlements.js && node --check products/sports-hub/services/import-store.js && node --check products/sports-hub/services/import-service.js && node --check products/sports-hub/services/analysis-store.js && node --check products/sports-hub/services/analysis-service.js && node --check products/sports-hub/services/check-in-store.js && node --check products/sports-hub/services/check-in-service.js && node --check products/sports-hub/services/mini-league-store.js && node --check products/sports-hub/services/league-access-provider.js && node --check products/sports-hub/services/hosted-auth-provider.js && node --check products/sports-hub/services/mini-league-service.js && node --check products/sports-hub/services/player-data-provider.js && node --check products/sports-hub/services/player-data-preview-service.js && node --check products/sports-hub/services/player-identity-service.js && node --check products/sports-hub/services/sportsdataio-football-fixture-provider.js && node --check products/sports-hub/services/roster-image-parser.js && node --check public/app.js && node --check public/event-finder/event-finder.js && node --check public/sports-hub/sports-hub.js && node --check public/sports-hub/portal.js && node --check public/sports-hub/history/history.js && node --check public/sports-hub/leagues/leagues.js && node --check public/sports-hub/account/account.js",
-    "start": "node index.js",
-    "check:amc": "node --check services/providers/amc.js"
+    "test:db": "supabase test db",
+    "check": "node --check index.js && find src public -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "build": "vite build",
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
@@ -16,8 +17,13 @@
     "@supabase/supabase-js": "2.57.4",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "playwright": "^1.61.1",
-    "resend": "^6.18.0",
-    "ws": "^8.21.1"
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@openai/sites-vite-plugin": "0.1.0",
+    "supabase": "2.116.0",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
   }
 }

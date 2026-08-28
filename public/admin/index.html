@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Moderation — Habesha Nights</title>
+    <link rel="stylesheet" href="/admin/admin.css">
+  </head>
+  <body>
+    <header><a href="/">← Habesha Nights</a><span>Private moderation</span></header>
+    <main>
+      <section class="login-card" id="login-panel">
+        <p class="eyebrow">Admin access</p><h1>Review the next good thing.</h1>
+        <p>Enter the private admin token. It stays in this tab’s memory and is never saved in the browser.</p>
+        <form id="login-form"><label>Admin token<input id="admin-token" type="password" required autocomplete="off"></label><button type="submit">Open moderation</button><p id="login-status" role="status"></p></form>
+      </section>
+
+      <section id="dashboard" hidden>
+        <div class="dashboard-heading"><div><p class="eyebrow">Phase 3 traction</p><h1>Marketplace control room</h1></div><button class="secondary" id="refresh" type="button">Refresh</button></div>
+        <div class="metrics"><article><span>Pending submissions</span><strong id="pending-count">0</strong></article><article><span>Event views</span><strong id="view-count">0</strong></article><article><span>Ticket clicks</span><strong id="click-count">0</strong></article><article><span>Ownership claims</span><strong id="claim-count">0</strong></article></div>
+        <div class="layout">
+          <section><div class="section-heading"><h2>Pending submissions</h2><p id="queue-status" role="status"></p></div><div id="submission-list" class="submission-list"></div></section>
+          <aside><h2>Organizer claims</h2><p>Verify an ownership request before marking the organizer as trusted.</p><div id="claim-list" class="submission-list compact-list"></div><h2>Featured requests</h2><p>Manual $39 weekend placement leads.</p><div id="promotion-list" class="submission-list compact-list"></div></aside>
+        </div>
+        <section class="analytics-section"><div class="section-heading"><h2>Event performance</h2><p>Views, outbound ticket clicks, and source attribution.</p></div><div id="analytics-list" class="analytics-list"></div></section>
+      </section>
+    </main>
+    <script src="/admin/admin.js" defer></script>
+  </body>
+</html>

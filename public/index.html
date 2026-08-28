@@ -2,269 +2,134 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1"
-    >
-
-    <title>NYC Opportunity Agent</title>
-
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Discover Ethiopian and Eritrean-adjacent diaspora events, nightlife, food, artists, and community in NYC and the DC/DMV.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Habesha Nights — Find where the culture is moving">
+    <meta property="og:description" content="Discover Ethiopian and Eritrean-adjacent diaspora events across NYC and the DC/DMV.">
+    <meta property="og:url" content="__SITE_ORIGIN__/">
+    <meta property="og:image" content="__SITE_ORIGIN__/og.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Habesha Nights — Find where the culture is moving">
+    <meta name="twitter:description" content="Discover Ethiopian and Eritrean-adjacent diaspora events across NYC and the DC/DMV.">
+    <meta name="twitter:image" content="__SITE_ORIGIN__/og.png">
+    <title>Habesha Nights — Find where the culture is moving</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
-
   <body>
-    <nav class="product-nav" aria-label="Product navigation">
-      <div class="product-nav-inner">
-        <a class="product-brand" href="/">NYC Tools</a>
-        <div class="product-links">
-          <a href="/sports-hub/">Sports Hub</a>
-          <a aria-current="page" href="/opportunity-agent/">Opportunity Agent</a>
-          <a href="/event-finder/">Event Finder</a>
-        </div>
-      </div>
-    </nav>
+    <a class="skip-link" href="#events">Skip to events</a>
     <header>
-      <div>
-        <h1>NYC Opportunity Agent</h1>
-
-        <div class="subtitle">
-          Operations console for tickets, reservations,
-          events, and other high-value opportunities.
+      <nav aria-label="Main navigation">
+        <a class="brand" href="/" aria-label="Habesha Nights home"><span>H</span> Habesha Nights</a>
+        <div class="nav-links"><a href="#events">Discover</a><a href="#businesses">Places</a><a href="#organizers">Organizers</a></div>
+        <button class="submit-button" type="button" data-open-submit>Submit an Event</button>
+      </nav>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">NYC · DC / DMV</p>
+          <h1>Find where the culture is moving.</h1>
+          <p class="lede">One place for Ethiopian and Eritrean-adjacent music, nightlife, food, art, and community—curated for the diaspora.</p>
+          <div class="hero-actions"><a class="primary" href="#events">Explore this weekend</a><button class="text-button" type="button" data-open-submit>Hosting something? <strong>Get listed →</strong></button></div>
         </div>
-
-        <div class="connection">
-          <span
-            class="connection-dot"
-            id="connection-dot"
-          ></span>
-
-          <span id="connection-text">
-            Connecting to application...
-          </span>
+        <div class="hero-card" id="featured-card" aria-label="Featured event">
+          <p>Editor’s pick</p>
+          <div><span class="pill">NYC · DC / DMV</span><h2>Your next night<br>starts here.</h2><p>Approved community events will appear here.</p></div>
         </div>
-      </div>
+      </section>
+      <div class="ticker" aria-label="Event categories"><span>Live music</span><span>Nightlife</span><span>Food & buna</span><span>Arts</span><span>Community</span><span>Family</span></div>
     </header>
 
     <main>
-      <div
-        class="error-message"
-        id="error-message"
-      >
-        The dashboard could not retrieve the latest
-        application state.
-      </div>
+      <section class="discover" id="events">
+        <div class="section-heading"><div><p class="eyebrow dark">Curated for the diaspora</p><h2>What’s happening</h2></div><p id="result-count" aria-live="polite">Loading events…</p></div>
+        <form class="filters" id="filters" role="search">
+          <div class="city-tabs" role="group" aria-label="Filter by city"><button class="active" type="button" data-city="">All cities</button><button type="button" data-city="NYC">New York</button><button type="button" data-city="DMV">DC / DMV</button></div>
+          <label><span>Category</span><select name="category" id="category-filter"><option value="">Everything</option></select></label>
+          <label class="search"><span>Search</span><input name="query" type="search" placeholder="Artist, venue, neighborhood…"></label>
+        </form>
+        <div class="event-grid" id="event-grid"></div>
+        <div class="state" id="event-state" role="status">Gathering the next good thing…</div>
+      </section>
 
-      <div class="grid">
-        <div class="card">
-          <div class="label">Monitor status</div>
+      <section class="places" id="businesses">
+        <div class="section-heading"><div><p class="eyebrow dark">Beyond the calendar</p><h2>Good places to know</h2></div><p>Restaurants, shops, and creative spaces worth keeping close.</p></div>
+        <div class="business-grid" id="business-grid"></div>
+      </section>
 
-          <div
-            class="value"
-            id="monitor-status"
-          >
-            Loading...
-          </div>
-
-          <div
-            class="status idle"
-            id="monitor-status-chip"
-          >
-            Loading
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Active watches</div>
-
-          <div
-            class="value"
-            id="active-watches"
-          >
-            0
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Total checks</div>
-
-          <div
-            class="value"
-            id="total-checks"
-          >
-            0
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Notifications sent</div>
-
-          <div
-            class="value"
-            id="notifications-sent"
-          >
-            0
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Last check</div>
-
-          <div
-            class="value small-value"
-            id="last-check"
-          >
-            Never
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Next check</div>
-
-          <div
-            class="value small-value"
-            id="next-check"
-          >
-            Not scheduled
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Rate limits</div>
-
-          <div
-            class="value"
-            id="rate-limits"
-          >
-            0
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="label">Errors</div>
-
-          <div
-            class="value"
-            id="errors"
-          >
-            0
-          </div>
-        </div>
-      </div>
-
-      <div class="section-heading">
-        <h2>Current watches</h2>
-
-        <button
-          type="button"
-          onclick="
-            document
-              .getElementById('watch-form')
-              .hidden = false;
-          "
-        >
-          + Add Watch
-        </button>
-      </div>
-
-      <form
-        class="watch-form"
-        id="watch-form"
-        hidden
-        onsubmit="createWatch(event)"
-      >
-        <div class="form-grid">
-          <div class="form-field">
-            <label for="watch-id">Watch ID</label>
-            <input
-              id="watch-id"
-              name="id"
-              placeholder="wicked-broadway"
-              required
-            >
-          </div>
-
-          <div class="form-field">
-            <label for="watch-movie">Movie or event</label>
-            <input
-              id="watch-movie"
-              name="movie"
-              placeholder="Wicked"
-              required
-            >
-          </div>
-
-          <div class="form-field">
-            <label for="watch-theater">Theater or location</label>
-            <input
-              id="watch-theater"
-              name="theater"
-              placeholder="AMC Lincoln Square 13"
-              required
-            >
-          </div>
-
-          <div class="form-field">
-            <label for="watch-format">Format</label>
-            <input
-              id="watch-format"
-              name="format"
-              placeholder="IMAX 70MM"
-            >
-          </div>
-
-          <div class="form-field">
-            <label for="watch-url">Page URL</label>
-            <input
-              id="watch-url"
-              name="pageUrl"
-              type="url"
-              placeholder="https://example.com"
-              required
-            >
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="submit">
-            Save Watch
-          </button>
-
-          <button
-            class="secondary-button"
-            type="button"
-            onclick="
-              document
-                .getElementById('watch-form')
-                .hidden = true;
-            "
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-
-      <div
-        class="watch-list"
-        id="watch-list"
-      >
-        <div class="empty-state">
-          Loading watches...
-        </div>
-      </div>
-
-      <h2>Recent activity</h2>
-
-      <div
-        class="event-list"
-        id="event-list"
-      >
-        <div class="empty-state">
-          Loading recent activity...
-        </div>
-      </div>
+      <section class="organizer-band" id="organizers">
+        <div><p class="eyebrow">For the people making it happen</p><h2>Put your next event in front of the right crowd.</h2></div>
+        <div><p>Community listings stay free. Make one event the weekend pick for a simple launch price.</p><div class="organizer-actions"><button class="light-button" type="button" data-open-submit>Submit free</button><button class="light-button outline" type="button" data-open-promotion>Get featured · $39</button></div></div>
+      </section>
     </main>
 
-    <script src="/app.js"></script>
+    <footer><a class="brand" href="/"><span>H</span> Habesha Nights</a><p>Built for connection across NYC and the DC/DMV.</p><p class="disclaimer">Listings are reviewed before publication. Always confirm final details with the organizer.</p></footer>
+
+    <dialog id="event-dialog"><button class="close" type="button" aria-label="Close event details">×</button><div id="event-detail"></div></dialog>
+    <dialog id="submit-dialog" class="submission-dialog">
+      <button class="close" type="button" aria-label="Close submission form">×</button>
+      <p class="eyebrow dark">Free community listing</p>
+      <h2>Submit an Event</h2>
+      <p>Share the details below. Every event is reviewed before it appears publicly—usually within two business days.</p>
+      <form id="submission-form" enctype="multipart/form-data">
+        <div class="form-grid">
+          <label class="wide">Event name<input name="event_name" maxlength="160" required placeholder="Ethiopian New Year DMV"></label>
+          <label>Start date & time<input name="starts_at" type="datetime-local" required></label>
+          <label>End date & time <span>(optional)</span><input name="ends_at" type="datetime-local"></label>
+          <label>City<select name="city_id" id="submission-city" required><option value="">Choose a city</option></select></label>
+          <label>Category<select name="category_id" id="submission-category" required><option value="">Choose a category</option></select></label>
+          <label>Venue<input name="venue_name" maxlength="180" required placeholder="Venue name"></label>
+          <label>Neighborhood <span>(optional)</span><input name="venue_neighborhood" maxlength="120" placeholder="Silver Spring"></label>
+          <label class="wide">Address<input name="venue_address" maxlength="300" required placeholder="Street address, city, state"></label>
+          <label class="wide">Description<textarea name="description" maxlength="5000" required placeholder="Tell people what to expect, who it’s for, and anything they should know."></textarea></label>
+          <label>Ticket price <span>(optional)</span><input name="ticket_price_label" maxlength="80" placeholder="Free, $25, $20–35"></label>
+          <label>Ticket link <span>(optional)</span><input name="ticket_url" type="url" placeholder="https://…"></label>
+          <label>Instagram <span>(optional)</span><input name="instagram" maxlength="200" placeholder="@youraccount"></label>
+          <label>Flyer <span>(JPG, PNG or WebP · 5 MB max)</span><input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
+          <label>Organizer name<input name="organizer_name" maxlength="160" required></label>
+          <label>Contact name<input name="contact_name" maxlength="160" required></label>
+          <label>Contact email<input name="contact_email" type="email" maxlength="254" required></label>
+          <label>Contact phone <span>(optional)</span><input name="contact_phone" type="tel" maxlength="50"></label>
+          <label class="honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+        <label class="consent"><input type="checkbox" required> I confirm these details are accurate and I’m authorized to submit this event.</label>
+        <p class="form-status" id="submission-status" role="status"></p>
+        <button class="primary" type="submit">Send for review</button>
+      </form>
+    </dialog>
+    <dialog id="claim-dialog" class="submission-dialog compact-dialog">
+      <button class="close" type="button" aria-label="Close claim form">×</button>
+      <p class="eyebrow dark">Organizer verification</p>
+      <h2>Claim this event</h2>
+      <p>You’re claiming <strong id="claim-event-name"></strong>. We manually verify every request before updating a listing.</p>
+      <form id="claim-form">
+        <input id="claim-event-slug" type="hidden">
+        <div class="form-grid">
+          <label>Contact name<input name="contact_name" maxlength="160" required></label>
+          <label>Contact email<input name="contact_email" type="email" maxlength="254" required></label>
+          <label>Instagram <span>(optional)</span><input name="instagram" maxlength="200" placeholder="@youraccount"></label>
+          <label>Your relationship to this event<input name="relationship" maxlength="240" required placeholder="Organizer, promoter, venue…"></label>
+          <label class="wide">Corrections or notes <span>(optional)</span><textarea name="correction_notes" maxlength="2500" placeholder="Tell us what should be updated or how we can verify you."></textarea></label>
+        </div>
+        <p class="form-status" id="claim-status" role="status"></p>
+        <button class="primary" type="submit">Request verification</button>
+      </form>
+    </dialog>
+    <dialog id="promotion-dialog" class="submission-dialog compact-dialog">
+      <button class="close" type="button" aria-label="Close featured event form">×</button>
+      <p class="eyebrow dark">Launch offer · $39 per weekend</p>
+      <h2>Make your event the weekend pick.</h2>
+      <p>Featured events get priority placement across Habesha Nights. No automatic payment yet—we’ll confirm the dates and details with you personally.</p>
+      <form id="promotion-form">
+        <div class="form-grid">
+          <label>Event name<input name="event_name" maxlength="160" required></label>
+          <label>Organizer name<input name="organizer_name" maxlength="160" required></label>
+          <label>Contact email<input name="contact_email" type="email" maxlength="254" required></label>
+          <label>Instagram <span>(optional)</span><input name="instagram" maxlength="200" placeholder="@youraccount"></label>
+        </div>
+        <p class="form-status" id="promotion-status" role="status"></p>
+        <button class="primary" type="submit">Request featured placement</button>
+      </form>
+    </dialog>
+    <script src="/app.js" defer></script>
   </body>
 </html>

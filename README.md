@@ -1,139 +1,141 @@
-# Sports Hub
+# Habesha Nights
 
-Sports Hub is the primary product in this repository: a mobile-first fantasy
-team analyzer for football, basketball, and soccer. It gives users a clear,
-versioned Team Score, roster strengths, and server-protected recommendations
-without requiring a fantasy-platform connection.
+Habesha Nights is a moderated marketplace for discovering Ethiopian and Eritrean-adjacent diaspora events, nightlife, food, artists, businesses, and community happenings. The launch markets are New York City and the Washington, DC / DMV area.
 
-The original Opportunity Agent monitoring service and NYC Event Finder remain
-available as Labs products with their existing APIs, persistence, and URLs.
+## Phase 3 — Launch and Traction
 
-## Sports Hub
-
-- Phone-first guided lineup builder and offline sample teams
-- Football, basketball, and soccer support
-- Consent-based roster screenshot extraction with a required review step
-- Canonical player matching with explicit ambiguity review and provenance
-- Explainable 0–100 Team Score with completeness and confidence
-- Two complete free recommendations with premium details removed server-side
-- Advanced user-provided CSV and JSON imports
-- Privacy-safe share summaries and cards
-- Account-ready email-code sign-in at `/sports-hub/account/`
-- Versioned Supabase/Postgres schema with league Row Level Security policies
-
-Open <http://localhost:3000> or the compatible `/sports-hub/` URL.
-
-## Labs: Opportunity Agent
-
-- Browser-based monitoring with Playwright
-- Config-driven, multi-watch provider architecture
-- Multi-date availability scanning
-- Snapshot-based change detection
-- Email notifications and a real-time WebSocket dashboard
-- Background scheduling and rate-limit handling
-- Watch CRUD API and per-watch state storage
-
-## Current Provider
-
-The AMC provider can monitor a movie, theater, and format across future show
-dates and alert when matching tickets become available.
-
-## Project Structure
+The production application no longer contains a mock event catalog. It now supports the complete early marketplace loop:
 
 ```text
-config/
-  watches.json
-routes/
-services/
-  providers/
-    index.js
-    amc.js
-  monitor.js
-  scheduler.js
-  snapshot-store.js
-  compare.js
-  event-engine.js
-  email.js
-public/
-products/
-docs/
-index.js
+Visitor arrives from Instagram, TikTok, Google, WhatsApp, an organizer, or direct
+        ↓
+Discovers a real approved event
+        ↓
+Event view + source recorded
+        ↓
+Tracked /go/:slug ticket redirect
+        ↓
+Organizer sees measurable demand
+        ↓
+Claims the event or requests a $39 weekend feature
 ```
 
-## Running Locally
+The original moderated listing loop remains:
+
+```text
+Organizer submits event
+        ↓
+Pending moderation
+        ↓
+Admin edits, approves, or rejects
+        ↓
+Approved event appears publicly
+```
+
+### Included
+
+- Supabase/Postgres tables for events, organizers, venues, businesses, cities, categories, submissions, and outbound clicks
+- Event views, unique browser visitors, and source attribution for Instagram, TikTok, Google, organizers, WhatsApp, direct, and other referrals
+- Manual `Claim this event` requests with admin verification
+- A $39 weekend featured-event request product, intentionally without Stripe or automated checkout
+- `draft`, `pending`, `approved`, and `rejected` moderation states
+- Atomic approval transaction that normalizes a submission into organizer, venue, and event records
+- Public event submission form with optional flyer upload to Supabase Storage
+- Private `/admin/` queue for reviewing, editing, approving, and rejecting submissions
+- Server-side ticket redirects with privacy-preserving hashed IP metadata, attribution, view counts, click-through rate, and source breakdowns
+- Public catalog that returns approved upcoming events only
+- NYC and DMV reference records, eight launch categories, and 30 source-checked upcoming launch events—but no fake events
+- Row Level Security and revoked browser access on every application table
+- A Cloudflare Worker production adapter that preserves the Express application’s public API, admin, upload, approval, and redirect behavior for OpenAI Sites hosting
+
+The server uses a Supabase secret key and never sends it to browser code. Organizer contact data, submissions, and click records are only available through the token-protected server admin API.
+
+## Project structure
+
+```text
+public/
+  admin/                 Private moderation interface
+  index.html             Public discovery and submission experience
+src/
+  domain/                Submission and engagement validation
+  routes/                Public and admin APIs
+  services/              Supabase repository and click tracking
+supabase/
+  migrations/            Reproducible marketplace schema
+  tests/database/        Transactional Postgres tests
+worker/                   Production Sites adapter
+tests/                    HTTP, validation, and service tests
+```
+
+## Local setup
+
+Requirements: Node.js 20+, Docker, and npm.
 
 ```bash
 npm install
-npm test
+npx supabase start
+```
+
+Copy `.env.example` to `.env`, then use the local values printed by Supabase:
+
+```text
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_ROLE_KEY=<local service role key>
+ADMIN_TOKEN=<long random private value>
+CLICK_HASH_SALT=<different long random value>
+```
+
+Start Habesha Nights:
+
+```bash
 npm start
 ```
 
-The monitoring dashboard is available at <http://localhost:3000/opportunity-agent/>.
-NYC Event Finder remains at <http://localhost:3000/event-finder/>.
+- Public site: <http://localhost:3000>
+- Admin moderation: <http://localhost:3000/admin/>
+- Health: <http://localhost:3000/health>
 
-## Adding a Watch
+The site starts safely without Supabase credentials, but it serves an empty real-data catalog and disables submissions/admin writes until the database is configured. It never falls back to sample events.
 
-Use the dashboard/API or add an entry to `config/watches.json`:
-
-```json
-{
-  "id": "example-watch",
-  "provider": "AMC",
-  "enabled": true,
-  "movie": "Example Movie",
-  "theater": "Example Theater",
-  "format": "IMAX",
-  "pageUrl": "https://www.amctheatres.com/example"
-}
-```
-
-## Docker
+## Verification
 
 ```bash
-docker compose build
-docker compose up -d
-docker compose ps
-docker compose logs -f
+npm run check
+npm test
+npm run test:db
+docker compose config -q
 ```
 
-Stop the service with `docker compose down`.
+The database test requires the local Supabase stack. It verifies all 11 tables, reference seeds, the flyer bucket, RLS foundation, and the complete pending-to-approved transaction.
 
-## Deployment boundaries
+## Hosted Supabase and Sites launch
 
-Sports Hub is always mounted. Legacy background processes remain enabled by
-default so current behavior does not change:
+1. Create a Supabase project.
+2. Link it using the project reference shown in the Supabase dashboard.
+3. Apply the tracked migration with `npx supabase db push`.
+4. Set the Sites runtime variables from `.env.example`: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_FLYER_BUCKET`, `ADMIN_TOKEN`, and `CLICK_HASH_SALT`.
+5. Use a Supabase secret key when available; the legacy service-role key remains supported for older projects.
+6. Keep both key types server-only and keep `.env` untracked.
 
-- `LEGACY_MONITORING_ENABLED=false` prevents the AMC scheduler from starting.
-- `EVENT_FINDER_ENABLED=false` prevents the Event Finder API router from mounting.
+The public browser does not connect directly to Supabase. This keeps moderation data and organizer contact details behind the application server and lets the database deny `anon` and `authenticated` table access.
 
-These flags are intended for a future sports-only public deployment. They do
-not delete legacy code or data. The Labs pages and persisted files should be
-handled independently by deployment routing when a process is disabled. See
-[the product architecture](docs/PRODUCT_ARCHITECTURE.md) and
-[incremental roadmap](docs/ROADMAP.md).
+The production build uses `@openai/sites-vite-plugin` and the Cloudflare worker in `worker/`. The local Node/Express server remains the fastest development workflow and shares the same database contract.
 
-## Secrets
+## Operating the first marketplace
 
-Copy `.env.example` to `.env` for local configuration. Never commit
-`.env` or API keys. Rotate any credential that may previously have been
-shared outside the local environment.
+After launch, stop adding major features and run the validation sprint:
 
-Roster screenshot extraction is optional. Set `OPENAI_API_KEY` to enable it;
-`OPENAI_VISION_MODEL` defaults to `gpt-5.4-mini`. The browser accepts PNG,
-JPEG, and WebP images up to 6 MB. Sports Hub sends an image to OpenAI only
-after the user checks the disclosure, requests `store: false`, never saves the
-raw image, and requires the user to review extracted players before a team can
-be submitted. AI extraction may misread cropped or unclear screenshots.
+- Curate 30–50 legitimate upcoming NYC and DMV events
+- Invite 10–20 organizers to submit for free
+- Reach 500 unique visitors and 100 ticket-page clicks
+- Get five organizers to claim or submit an event
+- Sell one $39 weekend feature manually
+- Use measured click delivery to validate paid featured placement
 
-Player identity resolution defaults to a clearly labeled fictional offline
-directory. It can match exact names and aliases, surface likely typo matches,
-and require a choice when multiple players share a name. It does not provide
-live projections, injuries, or schedules. Those capabilities remain behind the
-provider contract until a commercial data license is approved.
+The first 30 listings are tracked in `supabase/migrations/20260828020000_verified_launch_events.sql` with a source URL and source-check timestamp. Recheck dates and ticket availability before each weekly send; real event details can change after publication.
 
-Hosted account sign-in remains disabled until `SUPABASE_URL` and a new
-`SUPABASE_PUBLISHABLE_KEY` are configured. Local teams and mini-leagues continue
-working when those settings are absent. See
-[the hosted beta setup](docs/HOSTED_BETA_SETUP.md). Do not configure a
-`SUPABASE_SECRET_KEY` until a server-only administrative feature explicitly
-needs it.
+Do not add accounts, native apps, social features, integrated payments, recommendations, AI, or owned ticketing until this organizer loop is working repeatedly.
+
+## Share-card asset
+
+`public/og.png` was generated with the built-in image-generation workflow using this prompt summary: a contemporary editorial Habesha Nights social card in warm cream, forest green, earthy red, and amber, with the exact product name, tagline, and NYC / DMV market label; no flags, stereotypes, religious symbols, or additional branding.

@@ -1,491 +1,178 @@
-let socket = null;
-
-function connectWebSocket() {
-  const protocol =
-    window.location.protocol === "https:"
-      ? "wss"
-      : "ws";
-
-  socket = new WebSocket(
-    `${protocol}://${window.location.host}`
-  );
-
-  socket.addEventListener("open", () => {
-    console.log(
-      "WebSocket connected."
-    );
-  });
-
-  socket.addEventListener("close", () => {
-    console.log(
-      "WebSocket disconnected. Reconnecting..."
-    );
-
-    setTimeout(
-      connectWebSocket,
-      3000
-    );
-  });
-
-  socket.addEventListener(
-    "message",
-    async (event) => {
-      const message = JSON.parse(event.data);
-
-      console.log(
-        "WebSocket:",
-        message
-      );
-
-      if (message.type === "event") {
-        await refreshState();
-      }
-    }
-  );
-}
-
-function escapeHtml(value = "") {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatDate(value, fallback) {
-  if (!value) {
-    return fallback;
-  }
-
-  return new Intl.DateTimeFormat(
-    "en-US",
-    {
-      timeZone: "America/New_York",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-      timeZoneName: "short"
-    }
-  ).format(new Date(value));
-}
-
-function renderWatches(watches) {
-  const container =
-    document.getElementById("watch-list");
-
-  if (!Array.isArray(watches) ||
-      watches.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        No watches are currently registered.
-      </div>
-    `;
-
-    return;
-  }
-
-  container.innerHTML = watches
-    .map((watch) => `
-      <div class="watch-card">
-        <div class="label">
-          ${escapeHtml(
-            watch.type ?? "Movie tickets"
-          )}
-        </div>
-
-        <div class="watch-title">
-          ${escapeHtml(
-            watch.movie ??
-            watch.title ??
-            "Untitled watch"
-          )}
-        </div>
-
-        <div class="details">
-          ${escapeHtml(
-            watch.theater ??
-            watch.location ??
-            "Location unavailable"
-          )}
-
-          ${watch.format
-            ? " · " + escapeHtml(watch.format)
-            : ""}
-        </div>
-
-        <div
-          class="status ${watch.enabled === false
-            ? "idle"
-            : ""}"
-        >
-          ${watch.enabled === false
-            ? "Disabled"
-            : "Monitoring"}
-        </div>
-
-        <div class="watch-actions">
-          <button
-            class="secondary-button"
-            type="button"
-            onclick="toggleWatch(
-              '${encodeURIComponent(watch.id)}',
-              ${watch.enabled === false
-                ? "true"
-                : "false"}
-            )"
-          >
-            ${watch.enabled === false
-              ? "Enable"
-              : "Disable"}
-          </button>
-
-          <button
-            class="danger-button"
-            type="button"
-            onclick="removeWatch(
-              '${encodeURIComponent(watch.id)}',
-              '${escapeHtml(
-                watch.movie ??
-                watch.title ??
-                watch.id
-              )}'
-            )"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    `)
-    .join("");
-}
-
-function renderEvents(events) {
-  const container =
-    document.getElementById("event-list");
-
-  if (!Array.isArray(events) ||
-      events.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        No recent events have been recorded.
-      </div>
-    `;
-
-    return;
-  }
-
-  container.innerHTML = events
-    .map((event) => `
-      <div class="event-card">
-        <div class="label">
-          ${escapeHtml(
-            event.type ?? "Event"
-          )}
-        </div>
-
-        <div class="event-title">
-          ${escapeHtml(
-            event.title ??
-            "Activity recorded"
-          )}
-        </div>
-
-        ${event.message
-          ? `
-            <div class="details">
-              ${escapeHtml(event.message)}
-            </div>
-          `
-          : ""}
-
-        <div class="timestamp">
-          ${formatDate(
-            event.timestamp,
-            "Time unavailable"
-          )}
-        </div>
-      </div>
-    `)
-    .join("");
-}
-
-function setMonitorStatus(status) {
-  const value =
-    document.getElementById(
-      "monitor-status"
-    );
-
-  const chip =
-    document.getElementById(
-      "monitor-status-chip"
-    );
-
-  const normalizedStatus =
-    String(status ?? "Idle");
-
-  value.textContent = normalizedStatus;
-  chip.textContent = normalizedStatus;
-
-  chip.className = "status";
-
-  if (
-    normalizedStatus.toLowerCase() ===
-    "idle"
-  ) {
-    chip.classList.add("idle");
-  }
-
-  if (
-    normalizedStatus
-      .toLowerCase()
-      .includes("error")
-  ) {
-    chip.classList.add("error");
-  }
-}
-
-async function toggleWatch(
-  encodedId,
-  enabled
-) {
-  const response = await fetch(
-    "/api/watches/" +
-      encodedId +
-      "/enabled",
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        enabled
-      })
-    }
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    alert(
-      data.error ||
-      "Could not update watch."
-    );
-
-    return;
-  }
-
-  await refreshState();
-}
-
-async function removeWatch(
-  encodedId,
-  watchName
-) {
-  const confirmed = window.confirm(
-    "Delete " + watchName + "?"
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
-  const response = await fetch(
-    "/api/watches/" + encodedId,
-    {
-      method: "DELETE"
-    }
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    alert(
-      data.error ||
-      "Could not delete watch."
-    );
-
-    return;
-  }
-
-  await refreshState();
-}
-
-async function createWatch(event) {
-  event.preventDefault();
-
-  const form = event.target;
-
-  const watch = {
-    id: form.id.value.trim(),
-    provider: "AMC",
-    type: "Movie Tickets",
-    enabled: true,
-    movie: form.movie.value.trim(),
-    theater: form.theater.value.trim(),
-    format: form.format.value.trim(),
-    pageUrl: form.pageUrl.value.trim()
-  };
-
-  const response = await fetch(
-    "/api/watches",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(watch)
-    }
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    alert(data.error || "Could not create watch.");
-    return;
-  }
-
-  form.reset();
-  form.hidden = true;
-
-  await refreshState();
-}
-
-async function refreshState() {
-  const errorMessage =
-    document.getElementById(
-      "error-message"
-    );
-
-  const connectionDot =
-    document.getElementById(
-      "connection-dot"
-    );
-
-  const connectionText =
-    document.getElementById(
-      "connection-text"
-    );
-
+const state = { city: "", category: "", query: "" };
+const eventGrid = document.querySelector("#event-grid");
+const eventState = document.querySelector("#event-state");
+const count = document.querySelector("#result-count");
+const eventDialog = document.querySelector("#event-dialog");
+const submitDialog = document.querySelector("#submit-dialog");
+const claimDialog = document.querySelector("#claim-dialog");
+const promotionDialog = document.querySelector("#promotion-dialog");
+const launchParams = new URLSearchParams(window.location.search);
+const knownSources = new Set(["instagram", "tiktok", "google", "organizer", "whatsapp", "direct", "other"]);
+const source = knownSources.has((launchParams.get("source") || launchParams.get("utm_source") || "").toLowerCase())
+  ? (launchParams.get("source") || launchParams.get("utm_source")).toLowerCase()
+  : "";
+const visitorId = (() => {
   try {
-    const response = await fetch(
-      "/api/state",
-      {
-        cache: "no-store"
-      }
-    );
+    const existing = localStorage.getItem("hn_visitor_id");
+    if (existing) return existing;
+    const created = crypto.randomUUID();
+    localStorage.setItem("hn_visitor_id", created);
+    return created;
+  } catch { return ""; }
+})();
 
-    if (!response.ok) {
-      throw new Error(
-        `Request failed: ${response.status}`
-      );
-    }
+const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
+const formatDate = (value) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }).format(new Date(value));
+const api = async (path, options) => {
+  const response = await fetch(path, options);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Request failed.");
+  return data;
+};
 
-    const state = await response.json();
+function eventCard(event) {
+  const image = event.imageUrl ? `<img class="event-image" src="${escapeHtml(event.imageUrl)}" alt="" loading="lazy">` : "";
+  return `<article class="event-card ${event.featured ? "featured" : ""}">${image}
+    <div class="card-top"><span class="pill">${escapeHtml(event.city)} · ${escapeHtml(event.category)}</span>${event.promoted ? '<span class="promoted">Promoted</span>' : ""}</div>
+    <p class="date">${formatDate(event.startsAt)}</p><h3>${escapeHtml(event.title)}</h3><p class="summary">${escapeHtml(event.summary)}</p>
+    <p class="venue">${escapeHtml(event.venue?.name || "Venue coming soon")} · ${escapeHtml(event.venue?.neighborhood || event.city)}</p>
+    <div class="card-bottom"><strong>${escapeHtml(event.priceLabel || "See details")}</strong><button type="button" data-event="${escapeHtml(event.slug)}">View event <span>↗</span></button></div>
+  </article>`;
+}
 
-    errorMessage.style.display = "none";
-    connectionDot.style.background =
-      "#22c55e";
-    connectionText.textContent =
-      "Live application state connected";
+function updateFeatured(event) {
+  if (!event) return;
+  const date = new Date(event.startsAt);
+  document.querySelector("#featured-card").innerHTML = `<p>${event.promoted ? "Promoted event" : "Editor’s pick"}</p><div class="hero-date"><span>${date.toLocaleString("en-US", { month: "short" }).toUpperCase()}</span><strong>${date.getDate()}</strong></div><div><span class="pill">${escapeHtml(event.city)} · ${escapeHtml(event.category)}</span><h2>${escapeHtml(event.title)}</h2><p>${escapeHtml(event.venue?.neighborhood || event.venue?.name || event.city)}</p></div>`;
+}
 
-    setMonitorStatus(
-      state.monitor?.status ?? "Idle"
-    );
-
-    document.getElementById(
-      "active-watches"
-    ).textContent =
-      state.watches?.length ?? 0;
-
-    document.getElementById(
-      "total-checks"
-    ).textContent =
-      state.stats?.totalChecks ?? 0;
-
-    document.getElementById(
-      "notifications-sent"
-    ).textContent =
-      state.stats?.notificationsSent ?? 0;
-
-    document.getElementById(
-      "rate-limits"
-    ).textContent =
-      state.stats?.rateLimits ?? 0;
-
-    document.getElementById(
-      "errors"
-    ).textContent =
-      state.stats?.errors ?? 0;
-
-    document.getElementById(
-      "last-check"
-    ).textContent = formatDate(
-      state.monitor?.lastCheck,
-      "Never"
-    );
-
-    document.getElementById(
-      "next-check"
-    ).textContent = formatDate(
-      state.scheduler?.nextRun,
-      "Not scheduled"
-    );
-
-    const watchesResponse =
-      await fetch("/api/watches", {
-        cache: "no-store"
-      });
-
-    if (!watchesResponse.ok) {
-      throw new Error(
-        `Request failed: ${watchesResponse.status}`
-      );
-    }
-
-    const watchesData =
-      await watchesResponse.json();
-
-    const eventsResponse =
-      await fetch("/api/events", {
-        cache: "no-store"
-      });
-
-    if (!eventsResponse.ok) {
-      throw new Error(
-        `Request failed: ${eventsResponse.status}`
-      );
-    }
-
-    const eventsData =
-      await eventsResponse.json();
-
-    renderWatches(
-      watchesData.watches
-    );
-
-    renderEvents(
-      eventsData.events
-    );
-  } catch (error) {
-    console.error(error);
-
-    errorMessage.style.display = "block";
-    connectionDot.style.background =
-      "#ef4444";
-    connectionText.textContent =
-      "Application state unavailable";
+async function loadEvents() {
+  eventState.hidden = false;
+  eventGrid.innerHTML = "";
+  const params = new URLSearchParams(Object.entries(state).filter(([, value]) => value));
+  try {
+    const { events } = await api(`/api/events?${params}`);
+    count.textContent = `${events.length} event${events.length === 1 ? "" : "s"} found`;
+    eventState.hidden = Boolean(events.length);
+    eventState.textContent = events.length ? "" : "No approved events match yet. Be the first to submit one.";
+    eventGrid.innerHTML = events.map(eventCard).join("");
+    if (!state.city && !state.category && !state.query) updateFeatured(events[0]);
+  } catch {
+    eventState.textContent = "The live catalog isn’t connected yet. Check back soon or submit an event for review.";
+    count.textContent = "Catalog setup in progress";
   }
 }
 
-connectWebSocket();
+async function loadReferenceData() {
+  try {
+    const { cities, categories } = await api("/api/reference-data");
+    document.querySelector("#submission-city").insertAdjacentHTML("beforeend", cities.map((city) => `<option value="${escapeHtml(city.id)}">${escapeHtml(city.name)}</option>`).join(""));
+    document.querySelector("#submission-category").insertAdjacentHTML("beforeend", categories.map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`).join(""));
+    document.querySelector("#category-filter").insertAdjacentHTML("beforeend", categories.map((category) => `<option value="${escapeHtml(category.slug)}">${escapeHtml(category.name)}</option>`).join(""));
+  } catch {
+    document.querySelector("#submission-status").textContent = "Event submissions will open as soon as the database connection is complete.";
+  }
+}
 
-refreshState();
+document.querySelectorAll("[data-city]").forEach((button) => button.addEventListener("click", () => {
+  document.querySelectorAll("[data-city]").forEach((item) => item.classList.remove("active"));
+  button.classList.add("active");
+  state.city = button.dataset.city;
+  loadEvents();
+}));
+document.querySelector("[name=category]").addEventListener("change", (event) => { state.category = event.target.value; loadEvents(); });
+let searchTimer;
+document.querySelector("[name=query]").addEventListener("input", (event) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { state.query = event.target.value; loadEvents(); }, 220);
+});
 
-setInterval(
-  refreshState,
-  5000
-);
+eventGrid.addEventListener("click", async (click) => {
+  const button = click.target.closest("[data-event]");
+  if (!button) return;
+  try {
+    const { event } = await api(`/api/events/${encodeURIComponent(button.dataset.event)}`);
+    api(`/api/events/${encodeURIComponent(event.slug)}/view`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitor_id: visitorId, source, referrer: document.referrer }) }).catch(() => {});
+    const tracking = source ? `?source=${encodeURIComponent(source)}` : "";
+    const tickets = event.hasTickets ? `<a class="primary" href="/go/${encodeURIComponent(event.slug)}${tracking}" target="_blank" rel="noopener">View tickets ↗</a>` : '<button class="primary disabled" type="button" disabled>Tickets not listed</button>';
+    const image = event.imageUrl ? `<img class="detail-image" src="${escapeHtml(event.imageUrl)}" alt="Event flyer for ${escapeHtml(event.title)}">` : "";
+    document.querySelector("#event-detail").innerHTML = `${image}<p class="eyebrow dark">${escapeHtml(event.city)} · ${escapeHtml(event.category)}</p><h2>${escapeHtml(event.title)}</h2><p class="dialog-date">${formatDate(event.startsAt)} · ${escapeHtml(event.priceLabel || "See organizer")}</p><p>${escapeHtml(event.description)}</p><div class="detail-box"><strong>${escapeHtml(event.venue?.name || "Venue coming soon")}</strong><span>${escapeHtml(event.venue?.address || event.city)}</span></div><p class="organizer">Presented by <strong>${escapeHtml(event.organizer?.name || "Independent organizer")}</strong></p><div class="detail-actions">${tickets}<button class="claim-button" type="button" data-claim-event="${escapeHtml(event.slug)}" data-event-title="${escapeHtml(event.title)}">Claim this event</button></div>`;
+    eventDialog.showModal();
+  } catch { eventState.textContent = "That event could not be opened."; }
+});
+
+document.querySelectorAll("dialog .close").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+document.querySelectorAll("[data-open-submit]").forEach((button) => button.addEventListener("click", () => submitDialog.showModal()));
+document.querySelectorAll("[data-open-promotion]").forEach((button) => button.addEventListener("click", () => promotionDialog.showModal()));
+document.querySelector("#event-detail").addEventListener("click", (click) => {
+  const button = click.target.closest("[data-claim-event]");
+  if (!button) return;
+  eventDialog.close();
+  document.querySelector("#claim-event-slug").value = button.dataset.claimEvent;
+  document.querySelector("#claim-event-name").textContent = button.dataset.eventTitle;
+  claimDialog.showModal();
+});
+document.querySelector("#submission-form").addEventListener("submit", async (submit) => {
+  submit.preventDefault();
+  const form = submit.currentTarget;
+  const button = form.querySelector("button[type=submit]");
+  const status = document.querySelector("#submission-status");
+  button.disabled = true;
+  status.className = "form-status";
+  status.textContent = "Sending your event for review…";
+  try {
+    const result = await api("/api/submissions", { method: "POST", body: new FormData(form) });
+    form.reset();
+    status.classList.add("success");
+    status.textContent = `${result.message} Save this reference: ${result.submission.id.slice(0, 8).toUpperCase()}.`;
+  } catch (error) {
+    status.classList.add("error");
+    status.textContent = error.message;
+  } finally { button.disabled = false; }
+});
+
+document.querySelector("#claim-form").addEventListener("submit", async (submit) => {
+  submit.preventDefault();
+  const form = submit.currentTarget;
+  const button = form.querySelector("button[type=submit]");
+  const status = document.querySelector("#claim-status");
+  button.disabled = true;
+  status.className = "form-status";
+  status.textContent = "Sending claim for verification…";
+  try {
+    const slug = document.querySelector("#claim-event-slug").value;
+    const body = Object.fromEntries(new FormData(form));
+    const result = await api(`/api/events/${encodeURIComponent(slug)}/claims`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    form.reset();
+    status.classList.add("success");
+    status.textContent = result.message;
+  } catch (error) { status.classList.add("error"); status.textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+document.querySelector("#promotion-form").addEventListener("submit", async (submit) => {
+  submit.preventDefault();
+  const form = submit.currentTarget;
+  const button = form.querySelector("button[type=submit]");
+  const status = document.querySelector("#promotion-status");
+  button.disabled = true;
+  status.className = "form-status";
+  status.textContent = "Sending your request…";
+  try {
+    const body = Object.fromEntries(new FormData(form));
+    const result = await api("/api/promotion-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    form.reset();
+    status.classList.add("success");
+    status.textContent = result.message;
+  } catch (error) { status.classList.add("error"); status.textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+api("/api/businesses").then(({ businesses }) => {
+  document.querySelector("#business-grid").innerHTML = businesses.length
+    ? businesses.map((business) => `<article><p class="eyebrow dark">${escapeHtml(business.category)} · ${escapeHtml(business.city)}</p><h3>${escapeHtml(business.name)}</h3><p>${escapeHtml(business.description)}</p><span>${escapeHtml(business.neighborhood || business.city)}${business.promoted ? " · Featured partner" : ""}</span></article>`).join("")
+    : '<div class="empty-businesses">Approved community businesses will appear here.</div>';
+}).catch(() => {});
+
+loadReferenceData();
+loadEvents();

@@ -1,12 +1,10 @@
-FROM node:20-bookworm
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install
-
-RUN npx playwright install --with-deps chromium
+RUN npm ci --omit=dev
 
 COPY . .
 
