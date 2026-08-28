@@ -123,6 +123,8 @@ The public browser does not connect directly to Supabase. This keeps moderation 
 
 The production deployment serves `public/` through the Cloudflare Worker in `worker/`. The local Node/Express server remains the fastest development workflow and shares the same database contract.
 
+If a one-file Worker must be published from the Cloudflare dashboard instead of Wrangler, run `npm run build:console-worker` and publish the ignored `dist/cloudflare-console-worker.mjs` artifact. It embeds the public HTML, CSS, and JavaScript so the dashboard deployment does not depend on a static-assets binding.
+
 ## Operating the first marketplace
 
 After launch, stop adding major features and run the validation sprint:
