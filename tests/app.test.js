@@ -67,6 +67,7 @@ test("approved events and reference data are public", () => withServer(async (ba
   assert.doesNotMatch(page, /Get featured · \$39/);
   assert.match(page, /rel="manifest" href="\/manifest\.webmanifest"/);
   assert.match(page, /data-install-app/);
+  assert.match(page, /name="google-site-verification"/);
 }));
 
 test("each event has a focused search page with Event structured data", () => withServer(async (base) => {
