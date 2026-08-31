@@ -63,7 +63,7 @@ function validatePromotionRequest(input = {}) {
     contact_email: email(input.contact_email),
     instagram: clean(input.instagram, 200) || null,
     requested_placement: "weekend_featured",
-    quoted_price_cents: 3900
+    quoted_price_cents: 0
   };
 }
 

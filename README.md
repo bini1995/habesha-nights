@@ -134,10 +134,12 @@ After launch, stop adding major features and run the validation sprint:
 - Invite 10–20 organizers to submit for free
 - Reach 500 unique visitors and 100 ticket-page clicks
 - Get five organizers to claim or submit an event
-- Sell one $39 weekend feature manually
-- Use measured click delivery to validate paid featured placement
+- Collect at least three free launch spotlight requests
+- Use measured click delivery and organizer follow-up to decide when to test paid featured placement
 
 The first 30 listings are tracked in `supabase/migrations/20260828020000_verified_launch_events.sql` with a source URL and source-check timestamp. Recheck dates and ticket availability before each weekly send; real event details can change after publication.
+
+Keep listings and featured spotlights free during launch. After the validation targets are met, test one paid weekend placement manually with a hosted payment link or invoice; do not build checkout yet.
 
 Do not add accounts, native apps, social features, integrated payments, recommendations, AI, or owned ticketing until this organizer loop is working repeatedly.
 

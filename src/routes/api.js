@@ -48,7 +48,7 @@ function createApiRouter({ marketplace }) {
   }));
   router.post("/promotion-requests", createSubmissionLimiter({ limit: 3 }), asyncRoute(async (request, response) => {
     const requestItem = await marketplace.createPromotionRequest(validatePromotionRequest(request.body));
-    response.status(201).json({ request: requestItem, message: "We’ll follow up about featured placement." });
+    response.status(201).json({ request: requestItem, message: "Your free launch spotlight request is in. We’ll follow up to confirm timing and placement." });
   }));
   return router;
 }

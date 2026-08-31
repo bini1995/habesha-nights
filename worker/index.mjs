@@ -106,7 +106,7 @@ function promotionInput(input) {
     contact_email: validEmail(input.contact_email),
     instagram: clean(input.instagram, 200) || null,
     requested_placement: "weekend_featured",
-    quoted_price_cents: 3900
+    quoted_price_cents: 0
   };
 }
 
@@ -258,7 +258,7 @@ async function handlePublicApi(request, env, url, segments) {
   if (url.pathname === "/api/promotion-requests" && request.method === "POST") {
     await limit(request, env);
     const rows = await database(env, "/rest/v1/promotion_requests?select=id,status", { method: "POST", prefer: "return=representation", body: { ...promotionInput(await bodyJson(request)), status: "pending" } });
-    return json({ request: rows[0], message: "We’ll follow up about featured placement." }, 201);
+    return json({ request: rows[0], message: "Your free launch spotlight request is in. We’ll follow up to confirm timing and placement." }, 201);
   }
   return json({ error: "API route not found." }, 404);
 }

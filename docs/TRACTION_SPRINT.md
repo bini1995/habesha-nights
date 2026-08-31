@@ -13,7 +13,7 @@ Track these numbers daily from `/admin/`:
 | Organizers who claim or submit | 5 |
 | Unique visitors | 500 |
 | Outbound ticket clicks | 100 |
-| Paid weekend features | 1 |
+| Free launch spotlight requests | 3 |
 
 ## Campaign links
 
@@ -41,22 +41,33 @@ Suggested organizer note:
 
 > Hey — I’m building Habesha Nights, a discovery platform for Ethiopian and Eritrean-adjacent events in NYC and the DMV. I added your upcoming event and send visitors directly to your official ticket page. The listing is free. Here is the page: [EVENT LINK]. If you’d like to claim it, correct anything, or send future events, use “Claim this event” or “Submit an Event.”
 
-## Week 2 — distribution and first offer
+## Week 2 — distribution and free spotlight test
 
 1. Follow up once with organizers who opened or replied but did not claim.
 2. Publish a Friday-to-Sunday roundup for each market and distribute it through Instagram and WhatsApp.
 3. Identify the three events with the best view-to-ticket-click performance.
 4. Send those organizers a short performance update with real numbers from `/admin/`.
-5. Offer one weekend feature for $39. Handle the first payment and placement manually; do not add checkout yet.
+5. Offer one free weekend spotlight to the strongest organizer prospects and measure whether priority placement improves views and ticket clicks.
 6. End the sprint by recording which channel, city, category, and organizer action produced the strongest response.
 
 Suggested performance follow-up:
 
-> Quick update: Habesha Nights sent [TICKET CLICKS] visitors from your listing to the official ticket page, from [EVENT VIEWS] event views. I’m testing one featured weekend placement at $39, with priority placement on the homepage and roundup. Would you like the details for an upcoming event?
+> Quick update: Habesha Nights sent [TICKET CLICKS] visitors from your listing to the official ticket page, from [EVENT VIEWS] event views. I’m offering a free featured weekend spotlight during launch, with priority placement on the homepage and roundup. Would you like one for an upcoming event?
+
+## When to turn payments on
+
+Keep listings and spotlights free until the scoreboard shows at least 500 unique visitors, 100 outbound ticket clicks, five organizers claiming or submitting events, and three organizers requesting a spotlight. Then test one paid offer without building checkout:
+
+1. Agree on the event, weekend, placement, and price by email or direct message.
+2. Send a hosted Stripe Payment Link or a simple invoice for a $39 weekend feature.
+3. Mark the request complete in `/admin/` after payment and delivery.
+4. Send the organizer a results note with event views, ticket clicks, click-through rate, and traffic sources.
+
+Only automate payment after at least three organizers have paid manually. The next revenue tests after featured events are promoted business listings, newsletter or roundup sponsorships, creator promotion packages, affiliate partnerships, and—once ticket volume is meaningful—ticket commissions.
 
 ## Decision after two weeks
 
-- Continue if organizers claim or submit events, ticket clicks grow, and at least one promoter is willing to pay.
+- Continue if organizers claim or submit events, ticket clicks grow, and organizers request the free spotlight; begin a paid test only after the activation targets above are met.
 - Improve distribution and listing quality if visitors click but organizers do not engage.
 - Revisit the positioning before building more product if neither visitors nor organizers respond.
 

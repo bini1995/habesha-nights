@@ -45,6 +45,8 @@ test("approved events and reference data are public", () => withServer(async (ba
   assert.doesNotMatch(page, /__SITE_ORIGIN__/);
   assert.match(await (await fetch(`${base}/robots.txt`)).text(), new RegExp(`Sitemap: ${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/sitemap\\.xml`));
   assert.match(await (await fetch(`${base}/sitemap.xml`)).text(), new RegExp(`<loc>${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/</loc>`));
+  assert.match(page, /Get featured · free/);
+  assert.doesNotMatch(page, /Get featured · \$39/);
 }));
 
 test("organizer submission enters pending moderation", () => withServer(async (base) => {

@@ -40,8 +40,9 @@ function claimCard(item) {
 }
 
 function promotionCard(item) {
+  const placement = item.quoted_price_cents > 0 ? `$${(item.quoted_price_cents / 100).toFixed(0)} weekend feature` : "Free launch spotlight";
   return `<article class="submission-card compact" data-id="${escapeHtml(item.id)}">
-    <span class="city">$${(item.quoted_price_cents / 100).toFixed(0)} weekend feature</span><h3>${escapeHtml(item.event_name)}</h3>
+    <span class="city">${placement}</span><h3>${escapeHtml(item.event_name)}</h3>
     <p>${escapeHtml(item.organizer_name)} · ${escapeHtml(item.contact_email)}${item.instagram ? ` · ${escapeHtml(item.instagram)}` : ""}</p>
     <div class="actions"><button data-promotion-action="contacted" type="button">Mark contacted</button><button class="secondary" data-promotion-action="completed" type="button">Mark complete</button></div><p class="card-status" role="status"></p>
   </article>`;
