@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "test:db": "supabase test db",
-    "check": "node --check index.js && find src public -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "check": "node --check index.js && node --check worker/index.mjs && find src public -name '*.js' -print0 | xargs -0 -n1 node --check && node -e \"JSON.parse(require('node:fs').readFileSync('public/manifest.webmanifest','utf8'))\"",
     "build": "vite build && node scripts/stage-sites-build.mjs",
     "build:console-worker": "node scripts/build-console-worker.mjs",
     "start": "node index.js"

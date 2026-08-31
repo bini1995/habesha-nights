@@ -2,6 +2,22 @@
 
 Habesha Nights is a moderated marketplace for discovering Ethiopian and Eritrean-adjacent diaspora events, nightlife, food, artists, businesses, and community happenings. The launch markets are New York City and the Washington, DC / DMV area.
 
+## Phase 4 — Search + Installable Mobile Experience
+
+Habesha Nights now has a lightweight mobile-app foundation without maintaining separate iPhone and Android codebases:
+
+- Installable from supported Android browsers and from Safari’s **Add to Home Screen** flow on iPhone/iPad
+- Branded home-screen icons, standalone display, launch colors, and an offline fallback
+- A service worker that caches only the safe app shell while keeping live events, admin, submissions, and ticket redirects network-first
+- Dedicated `/events/:slug` pages for every approved event
+- Server-rendered event titles, descriptions, social cards, canonical URLs, and Schema.org `Event` JSON-LD
+- A dynamic sitemap containing all approved upcoming event URLs
+- Source attribution preserved through event pages and tracked ticket redirects
+
+This is intentionally an installable web app, not an App Store or Play Store wrapper. Native store packages should wait until the product has mobile-specific value such as saved events, city/category alerts, push notifications, and calendar integration.
+
+The planned `habeshascene.com` domain can be connected later without changing this architecture. Until then, `habesha.clarifyops.com` remains the canonical production home.
+
 ## Phase 3 — Launch and Traction
 
 The production application no longer contains a mock event catalog. It now supports the complete early marketplace loop:
@@ -17,7 +33,7 @@ Tracked /go/:slug ticket redirect
         ↓
 Organizer sees measurable demand
         ↓
-Claims the event or requests a $39 weekend feature
+Claims the event or requests a free launch spotlight
 ```
 
 The original moderated listing loop remains:
@@ -37,7 +53,7 @@ Approved event appears publicly
 - Supabase/Postgres tables for events, organizers, venues, businesses, cities, categories, submissions, and outbound clicks
 - Event views, unique browser visitors, and source attribution for Instagram, TikTok, Google, organizers, WhatsApp, direct, and other referrals
 - Manual `Claim this event` requests with admin verification
-- A $39 weekend featured-event request product, intentionally without Stripe or automated checkout
+- A free launch spotlight request flow, ready to become a manually priced featured-event test after traction targets are met
 - `draft`, `pending`, `approved`, and `rejected` moderation states
 - Atomic approval transaction that normalizes a submission into organizer, venue, and event records
 - Public event submission form with optional flyer upload to Supabase Storage
@@ -48,7 +64,7 @@ Approved event appears publicly
 - Row Level Security and revoked browser access on every application table
 - A Cloudflare Worker production adapter that preserves the Express application’s public API, admin, upload, approval, and redirect behavior
 - Cloudflare static assets, native submission rate limiting, and production observability configured in `wrangler.jsonc`
-- Shareable event deep links, a general social share flow, canonical metadata, structured data, `robots.txt`, and a production sitemap
+- Dedicated shareable event pages, a general social share flow, per-event canonical metadata and structured data, `robots.txt`, and a dynamic production sitemap
 
 The server uses a Supabase secret key and never sends it to browser code. Organizer contact data, submissions, and click records are only available through the token-protected server admin API.
 
@@ -58,6 +74,9 @@ The server uses a Supabase secret key and never sends it to browser code. Organi
 public/
   admin/                 Private moderation interface
   index.html             Public discovery and submission experience
+  event.html             Server-rendered event page template
+  manifest.webmanifest   Installable app metadata
+  sw.js                  Safe app-shell caching and offline fallback
 src/
   domain/                Submission and engagement validation
   routes/                Public and admin APIs
@@ -141,7 +160,7 @@ The first 30 listings are tracked in `supabase/migrations/20260828020000_verifie
 
 Keep listings and featured spotlights free during launch. After the validation targets are met, test one paid weekend placement manually with a hosted payment link or invoice; do not build checkout yet.
 
-Do not add accounts, native apps, social features, integrated payments, recommendations, AI, or owned ticketing until this organizer loop is working repeatedly.
+Do not add accounts, native store apps, social features, integrated payments, recommendations, AI, or owned ticketing until this organizer loop is working repeatedly. The installable web app is the low-cost mobile foundation in the meantime.
 
 The two-week operating cadence, campaign-link format, outreach copy, and validation scoreboard live in [`docs/TRACTION_SPRINT.md`](docs/TRACTION_SPRINT.md).
 

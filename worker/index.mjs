@@ -6,9 +6,24 @@ function json(value, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
 
-function searchFiles(url) {
+function escapeMarkup(value = "") {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
+}
+
+function escapeXml(value = "") {
+  return escapeMarkup(value);
+}
+
+async function searchFiles(url, env) {
   if (url.pathname === "/robots.txt") return new Response(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: ${url.origin}/sitemap.xml\n`, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
-  if (url.pathname === "/sitemap.xml") return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${url.origin}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url></urlset>`, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=3600" } });
+  if (url.pathname === "/sitemap.xml") {
+    let events = [];
+    try {
+      events = await database(env, `/rest/v1/events?${queryString({ select: "slug,updated_at", status: "eq.approved", starts_at: `gte.${new Date().toISOString()}`, order: "starts_at.asc" })}`);
+    } catch {}
+    const eventUrls = events.map((event) => `<url><loc>${escapeXml(`${url.origin}/events/${encodeURIComponent(event.slug)}`)}</loc><lastmod>${escapeXml(new Date(event.updated_at).toISOString())}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`).join("");
+    return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${escapeXml(`${url.origin}/`)}</loc><changefreq>daily</changefreq><priority>1.0</priority></url>${eventUrls}</urlset>`, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=1800" } });
+  }
   return null;
 }
 
@@ -145,13 +160,55 @@ function publicEvent(row) {
   const organizer = related(row.organizers);
   return {
     id: row.id, slug: row.slug, title: row.title, summary: row.summary, description: row.description,
-    city: city?.short_code || city?.name || null, category: category?.name || null,
+    city: city?.short_code || city?.name || null, cityName: city?.name || null, category: category?.name || null,
     startsAt: row.starts_at, endsAt: row.ends_at, imageUrl: row.image_url,
+    ticketPriceCents: row.ticket_price_cents,
     priceLabel: row.ticket_price_label || (row.ticket_price_cents === 0 ? "Free" : null),
     featured: row.featured, promoted: row.promoted, hasTickets: Boolean(row.ticket_url),
     venue: venue ? { name: venue.name, neighborhood: venue.neighborhood, address: venue.address } : null,
     organizer: organizer ? { id: organizer.id, name: organizer.name, instagram: organizer.instagram, website: organizer.website, verified: organizer.verified } : null
   };
+}
+
+function eventJsonLd(event, canonicalUrl, origin) {
+  const location = {
+    "@type": "Place",
+    name: event.venue?.name || "Venue to be announced",
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: event.venue?.address || event.cityName || event.city,
+      addressLocality: event.cityName || event.city,
+      addressCountry: "US"
+    }
+  };
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    description: event.description || event.summary,
+    startDate: event.startsAt,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location,
+    image: [event.imageUrl || `${origin}/og.png`],
+    url: canonicalUrl,
+    organizer: { "@type": "Organization", name: event.organizer?.name || "Independent organizer" }
+  };
+  if (event.endsAt) data.endDate = event.endsAt;
+  if (event.hasTickets) {
+    data.offers = {
+      "@type": "Offer",
+      url: canonicalUrl,
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock"
+    };
+    if (Number.isInteger(event.ticketPriceCents)) data.offers.price = (event.ticketPriceCents / 100).toFixed(2);
+  }
+  return JSON.stringify(data).replace(/</g, "\\u003c");
+}
+
+function formatEventDate(value) {
+  return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York", timeZoneName: "short" }).format(new Date(value));
 }
 
 function queryString(values) {
@@ -321,21 +378,68 @@ async function handleAdminApi(request, env, url, segments) {
   return json({ error: "Admin route not found." }, 404);
 }
 
+async function fetchAsset(request, env, url, pathname) {
+  if (env.ASSETS) return env.ASSETS.fetch(new Request(new URL(pathname, url), request));
+  const upstream = await fetch(`${FALLBACK_ASSET_ORIGIN}${pathname}`);
+  if (!upstream.ok) return upstream;
+  const headers = new Headers(upstream.headers);
+  const extension = pathname.split(".").pop();
+  const contentType = { html: "text/html; charset=utf-8", css: "text/css; charset=utf-8", js: "application/javascript; charset=utf-8", png: "image/png", svg: "image/svg+xml", webmanifest: "application/manifest+json; charset=utf-8" }[extension];
+  if (contentType) headers.set("content-type", contentType);
+  headers.set("cache-control", "public, max-age=300");
+  return new Response(upstream.body, { status: upstream.status, headers });
+}
+
+async function eventPage(request, env, url, slug) {
+  const row = await getEventRow(env, clean(slug, 220));
+  if (!row) return new Response("Event not found.", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+  const event = publicEvent(row);
+  const templateResponse = await fetchAsset(request, env, url, "/event.html");
+  if (!templateResponse.ok) return templateResponse;
+  const canonicalUrl = `${url.origin}/events/${encodeURIComponent(event.slug)}`;
+  const description = clean(event.summary || event.description, 240).replace(/\s+/g, " ");
+  const requestedSource = clean(url.searchParams.get("source"), 40).toLowerCase();
+  const source = SOURCES.has(requestedSource) ? requestedSource : "direct";
+  const ticketQuery = source ? `?source=${encodeURIComponent(source)}` : "";
+  const media = event.imageUrl
+    ? `<img class="event-flyer" src="${escapeMarkup(event.imageUrl)}" alt="Event flyer for ${escapeMarkup(event.title)}">`
+    : '<div class="event-flyer-placeholder" aria-hidden="true">H</div>';
+  const ticketButton = event.hasTickets
+    ? `<a class="primary" href="/go/${encodeURIComponent(event.slug)}${ticketQuery}" target="_blank" rel="noopener">View tickets ↗</a>`
+    : '<button class="primary disabled" type="button" disabled>Tickets not listed</button>';
+  const replacements = {
+    "__EVENT_META_DESCRIPTION__": escapeMarkup(description),
+    "__EVENT_META_TITLE__": escapeMarkup(`${event.title} — Habesha Nights`),
+    "__EVENT_URL__": escapeMarkup(canonicalUrl),
+    "__EVENT_IMAGE_URL__": escapeMarkup(event.imageUrl || `${url.origin}/og.png`),
+    "__EVENT_JSON_LD__": eventJsonLd(event, canonicalUrl, url.origin),
+    "__EVENT_SLUG_ATTR__": escapeMarkup(event.slug),
+    "__EVENT_TITLE_ATTR__": escapeMarkup(event.title),
+    "__EVENT_MEDIA__": media,
+    "__EVENT_CITY__": escapeMarkup(event.city),
+    "__EVENT_CATEGORY__": escapeMarkup(event.category),
+    "__EVENT_TITLE__": escapeMarkup(event.title),
+    "__EVENT_DATE__": escapeMarkup(formatEventDate(event.startsAt)),
+    "__EVENT_PRICE__": escapeMarkup(event.priceLabel || "See organizer"),
+    "__EVENT_DESCRIPTION__": escapeMarkup(event.description),
+    "__EVENT_VENUE__": escapeMarkup(event.venue?.name || "Venue to be announced"),
+    "__EVENT_ADDRESS__": escapeMarkup(event.venue?.address || event.cityName || event.city),
+    "__EVENT_ORGANIZER__": escapeMarkup(event.organizer?.name || "Independent organizer"),
+    "__EVENT_TICKET_BUTTON__": ticketButton
+  };
+  let html = await templateResponse.text();
+  for (const [token, value] of Object.entries(replacements)) html = html.replaceAll(token, value);
+  const headers = new Headers(templateResponse.headers);
+  headers.set("content-type", "text/html; charset=utf-8");
+  headers.set("cache-control", "public, max-age=300");
+  return new Response(html, { status: 200, headers });
+}
+
 async function serveAsset(request, env, url) {
   const target = url.pathname === "/" ? "/index.html" : url.pathname === "/admin" ? "/admin/index.html" : url.pathname;
-  const fetchAsset = async (pathname) => {
-    if (env.ASSETS) return env.ASSETS.fetch(new Request(new URL(pathname, url), request));
-    const upstream = await fetch(`${FALLBACK_ASSET_ORIGIN}${pathname}`);
-    if (!upstream.ok) return upstream;
-    const headers = new Headers(upstream.headers);
-    const extension = pathname.split(".").pop();
-    const contentType = { html: "text/html; charset=utf-8", css: "text/css; charset=utf-8", js: "application/javascript; charset=utf-8", png: "image/png" }[extension];
-    if (contentType) headers.set("content-type", contentType);
-    headers.set("cache-control", "public, max-age=300");
-    return new Response(upstream.body, { status: upstream.status, headers });
-  };
-  let response = await fetchAsset(target);
-  if (response.status === 404 && !target.includes(".")) response = await fetchAsset("/index.html");
+  if (target === "/event.html") return new Response("Not found.", { status: 404 });
+  let response = await fetchAsset(request, env, url, target);
+  if (response.status === 404 && !target.includes(".")) response = await fetchAsset(request, env, url, "/index.html");
   if (target === "/index.html" && response.ok) {
     const html = (await response.text()).replaceAll("__SITE_ORIGIN__", url.origin);
     return new Response(html, { status: response.status, headers: { ...Object.fromEntries(response.headers), "content-type": "text/html; charset=utf-8" } });
@@ -347,7 +451,7 @@ async function handle(request, env) {
   const url = new URL(request.url);
   const segments = url.pathname.split("/").filter(Boolean);
   if (url.pathname === "/health") return json({ status: "ok", database: env.SUPABASE_URL && env.SUPABASE_SECRET_KEY ? "configured" : "not-configured" });
-  const searchFile = searchFiles(url);
+  const searchFile = await searchFiles(url, env);
   if (searchFile) return searchFile;
   if (segments[0] === "api" && segments[1] === "admin") return handleAdminApi(request, env, url, segments);
   if (segments[0] === "api") return handlePublicApi(request, env, url, segments);
@@ -357,6 +461,7 @@ async function handle(request, env) {
     await database(env, "/rest/v1/outbound_clicks", { method: "POST", prefer: "return=minimal", body: { event_id: event.id, destination_url: event.ticket_url, ...(await metadata(env, request, url.searchParams.get("source"), request.headers.get("referer"))) } });
     return Response.redirect(event.ticket_url, 302);
   }
+  if (segments[0] === "events" && segments[1] && !segments[2] && request.method === "GET") return eventPage(request, env, url, segments[1]);
   return serveAsset(request, env, url);
 }
 

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#174d3b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Habesha Nights">
+    <meta name="description" content="__EVENT_META_DESCRIPTION__">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="__EVENT_META_TITLE__">
+    <meta property="og:description" content="__EVENT_META_DESCRIPTION__">
+    <meta property="og:url" content="__EVENT_URL__">
+    <meta property="og:image" content="__EVENT_IMAGE_URL__">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="__EVENT_META_TITLE__">
+    <meta name="twitter:description" content="__EVENT_META_DESCRIPTION__">
+    <meta name="twitter:image" content="__EVENT_IMAGE_URL__">
+    <link rel="canonical" href="__EVENT_URL__">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <title>__EVENT_META_TITLE__</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script type="application/ld+json">__EVENT_JSON_LD__</script>
+  </head>
+  <body class="event-page-shell" data-event-slug="__EVENT_SLUG_ATTR__" data-event-title="__EVENT_TITLE_ATTR__">
+    <header>
+      <nav aria-label="Main navigation">
+        <a class="brand" href="/" aria-label="Habesha Nights home"><span>H</span> Habesha Nights</a>
+        <div class="nav-links"><a href="/#events">Discover</a><a href="/#businesses">Places</a><a href="/#organizers">Organizers</a></div>
+        <div class="nav-actions"><button class="install-button" type="button" data-install-app hidden>Get the app</button><a class="submit-button" href="/?submit=1">Submit an Event</a></div>
+      </nav>
+    </header>
+    <main class="event-page-main">
+      <a class="event-back" href="/#events">← All events</a>
+      <article class="event-layout">
+        __EVENT_MEDIA__
+        <div class="event-copy">
+          <p class="eyebrow dark">__EVENT_CITY__ · __EVENT_CATEGORY__</p>
+          <h1>__EVENT_TITLE__</h1>
+          <p class="event-meta">__EVENT_DATE__ · __EVENT_PRICE__</p>
+          <p class="event-description">__EVENT_DESCRIPTION__</p>
+          <div class="event-location"><strong>__EVENT_VENUE__</strong><span>__EVENT_ADDRESS__</span></div>
+          <p class="event-presenter">Presented by <strong>__EVENT_ORGANIZER__</strong></p>
+          <div class="event-page-actions">__EVENT_TICKET_BUTTON__<button class="share-button" type="button" data-share-page>Share event</button><button class="claim-button" type="button" data-open-claim>Claim this event</button></div>
+          <p class="share-status" data-share-status role="status"></p>
+          <p class="event-note">Listings are reviewed, but event details can change. Confirm final timing, venue rules, and ticket terms with the organizer.</p>
+        </div>
+      </article>
+    </main>
+    <footer><a class="brand" href="/"><span>H</span> Habesha Nights</a><p>Built for connection across NYC and the DC/DMV.</p><button class="footer-install" type="button" data-install-app hidden>Get the app</button></footer>
+    <dialog id="claim-dialog" class="submission-dialog compact-dialog">
+      <button class="close" type="button" aria-label="Close claim form">×</button>
+      <p class="eyebrow dark">Organizer verification</p>
+      <h2>Claim this event</h2>
+      <p>We manually verify every request before updating a listing.</p>
+      <form id="claim-form">
+        <div class="form-grid">
+          <label>Contact name<input name="contact_name" maxlength="160" required></label>
+          <label>Contact email<input name="contact_email" type="email" maxlength="254" required></label>
+          <label>Instagram <span>(optional)</span><input name="instagram" maxlength="200" placeholder="@youraccount"></label>
+          <label>Your relationship to this event<input name="relationship" maxlength="240" required placeholder="Organizer, promoter, venue…"></label>
+          <label class="wide">Corrections or notes <span>(optional)</span><textarea name="correction_notes" maxlength="2500" placeholder="Tell us what should be updated or how we can verify you."></textarea></label>
+        </div>
+        <p class="form-status" id="claim-status" role="status"></p>
+        <button class="primary" type="submit">Request verification</button>
+      </form>
+    </dialog>
+    <script src="/pwa.js" defer></script>
+    <script src="/event-page.js" defer></script>
+  </body>
+</html>

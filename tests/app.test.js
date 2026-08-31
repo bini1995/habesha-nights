@@ -6,7 +6,23 @@ function fakeMarketplace() {
   return {
     configured: true,
     listEvents: async () => [{ slug: "new-year", city: "DMV", title: "Ethiopian New Year" }],
-    getEvent: async (slug) => slug === "new-year" ? { slug, title: "Ethiopian New Year" } : null,
+    getEvent: async (slug) => slug === "new-year" ? {
+      slug,
+      title: "Ethiopian New Year",
+      summary: "A community celebration.",
+      description: "A community celebration with live music and food.",
+      city: "DMV",
+      cityName: "Washington, DC / DMV",
+      category: "Festivals",
+      startsAt: "2026-09-12T22:00:00.000Z",
+      endsAt: "2026-09-13T03:00:00.000Z",
+      imageUrl: null,
+      ticketPriceCents: 2500,
+      priceLabel: "$25",
+      hasTickets: true,
+      venue: { name: "Community Hall", address: "123 Main Street, Silver Spring, MD", neighborhood: "Silver Spring" },
+      organizer: { name: "DMV Culture Table" }
+    } : null,
     listBusinesses: async () => [],
     listReferenceData: async () => ({ cities: [{ id: "00000000-0000-4000-8000-000000000102", name: "Washington, DC / DMV" }], categories: [{ id: "00000000-0000-4000-8000-000000000206", name: "Festivals" }] }),
     createSubmission: async (submission) => ({ id: "11111111-1111-4111-8111-111111111111", status: "pending", ...submission }),
@@ -44,9 +60,27 @@ test("approved events and reference data are public", () => withServer(async (ba
   assert.match(page, new RegExp(`<link rel="canonical" href="${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/">`));
   assert.doesNotMatch(page, /__SITE_ORIGIN__/);
   assert.match(await (await fetch(`${base}/robots.txt`)).text(), new RegExp(`Sitemap: ${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/sitemap\\.xml`));
-  assert.match(await (await fetch(`${base}/sitemap.xml`)).text(), new RegExp(`<loc>${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/</loc>`));
+  const sitemap = await (await fetch(`${base}/sitemap.xml`)).text();
+  assert.match(sitemap, new RegExp(`<loc>${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/</loc>`));
+  assert.match(sitemap, new RegExp(`<loc>${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/events/new-year</loc>`));
   assert.match(page, /Get featured · free/);
   assert.doesNotMatch(page, /Get featured · \$39/);
+  assert.match(page, /rel="manifest" href="\/manifest\.webmanifest"/);
+  assert.match(page, /data-install-app/);
+}));
+
+test("each event has a focused search page with Event structured data", () => withServer(async (base) => {
+  const response = await fetch(`${base}/events/new-year?source=instagram`);
+  assert.equal(response.status, 200);
+  const page = await response.text();
+  assert.match(page, /<h1>Ethiopian New Year<\/h1>/);
+  assert.match(page, /"@type":"Event"/);
+  assert.match(page, /"startDate":"2026-09-12T22:00:00.000Z"/);
+  assert.match(page, new RegExp(`<link rel="canonical" href="${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/events/new-year">`));
+  assert.match(page, /href="\/go\/new-year\?source=instagram"/);
+  assert.doesNotMatch(page, /__EVENT_[A-Z_]+__/);
+  assert.equal((await fetch(`${base}/events/not-real`)).status, 404);
+  assert.equal((await fetch(`${base}/event.html`)).status, 404);
 }));
 
 test("organizer submission enters pending moderation", () => withServer(async (base) => {

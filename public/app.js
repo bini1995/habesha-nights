@@ -38,7 +38,7 @@ function eventCard(event) {
     <div class="card-top"><span class="pill">${escapeHtml(event.city)} · ${escapeHtml(event.category)}</span>${event.promoted ? '<span class="promoted">Promoted</span>' : ""}</div>
     <p class="date">${formatDate(event.startsAt)}</p><h3>${escapeHtml(event.title)}</h3><p class="summary">${escapeHtml(event.summary)}</p>
     <p class="venue">${escapeHtml(event.venue?.name || "Venue coming soon")} · ${escapeHtml(event.venue?.neighborhood || event.city)}</p>
-    <div class="card-bottom"><strong>${escapeHtml(event.priceLabel || "See details")}</strong><button type="button" data-event="${escapeHtml(event.slug)}">View event <span>↗</span></button></div>
+    <div class="card-bottom"><strong>${escapeHtml(event.priceLabel || "See details")}</strong><a href="${eventUrl(event.slug)}">View event <span>↗</span></a></div>
   </article>`;
 }
 
@@ -78,10 +78,9 @@ async function loadReferenceData() {
 
 function eventUrl(slug, attributedSource = source) {
   const url = new URL(window.location.href);
-  url.pathname = "/";
+  url.pathname = `/events/${encodeURIComponent(slug)}`;
   url.hash = "";
   url.search = "";
-  url.searchParams.set("event", slug);
   if (attributedSource) url.searchParams.set("source", attributedSource);
   return url;
 }
@@ -114,12 +113,6 @@ let searchTimer;
 document.querySelector("[name=query]").addEventListener("input", (event) => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => { state.query = event.target.value; loadEvents(); }, 220);
-});
-
-eventGrid.addEventListener("click", (click) => {
-  const button = click.target.closest("[data-event]");
-  if (!button) return;
-  openEvent(button.dataset.event);
 });
 
 document.querySelectorAll("dialog .close").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
@@ -214,4 +207,7 @@ api("/api/businesses").then(({ businesses }) => {
 }).catch(() => {});
 
 loadReferenceData();
-loadEvents().then(() => { if (requestedEvent) openEvent(requestedEvent, false); });
+loadEvents().then(() => {
+  if (requestedEvent) openEvent(requestedEvent, false);
+  if (launchParams.get("submit") === "1") submitDialog.showModal();
+});

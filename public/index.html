@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#174d3b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Habesha Nights">
     <meta name="description" content="Discover Ethiopian and Eritrean-adjacent diaspora events, nightlife, food, artists, and community in NYC and the DC/DMV.">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Habesha Nights — Find where the culture is moving">
@@ -14,6 +18,8 @@
     <meta name="twitter:description" content="Discover Ethiopian and Eritrean-adjacent diaspora events across NYC and the DC/DMV.">
     <meta name="twitter:image" content="__SITE_ORIGIN__/og.png">
     <link rel="canonical" href="__SITE_ORIGIN__/">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <title>Habesha Nights — Find where the culture is moving</title>
     <link rel="stylesheet" href="/styles.css">
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Habesha Nights","url":"__SITE_ORIGIN__/","description":"Discover Ethiopian and Eritrean-adjacent diaspora events across NYC and the DC/DMV.","inLanguage":"en-US","audience":{"@type":"Audience","geographicArea":[{"@type":"City","name":"New York City"},{"@type":"AdministrativeArea","name":"Washington, DC / DMV"}]}}</script>
@@ -24,7 +30,7 @@
       <nav aria-label="Main navigation">
         <a class="brand" href="/" aria-label="Habesha Nights home"><span>H</span> Habesha Nights</a>
         <div class="nav-links"><a href="#events">Discover</a><a href="#businesses">Places</a><a href="#organizers">Organizers</a></div>
-        <button class="submit-button" type="button" data-open-submit>Submit an Event</button>
+        <div class="nav-actions"><button class="install-button" type="button" data-install-app hidden>Get the app</button><button class="submit-button" type="button" data-open-submit>Submit an Event</button></div>
       </nav>
       <section class="hero">
         <div class="hero-copy">
@@ -64,7 +70,7 @@
       </section>
     </main>
 
-    <footer><a class="brand" href="/"><span>H</span> Habesha Nights</a><p>Built for connection across NYC and the DC/DMV.</p><p class="disclaimer">Listings are reviewed before publication. Always confirm final details with the organizer.</p></footer>
+    <footer><a class="brand" href="/"><span>H</span> Habesha Nights</a><p>Built for connection across NYC and the DC/DMV.</p><button class="footer-install" type="button" data-install-app hidden>Get the app</button><p class="disclaimer">Listings are reviewed before publication. Always confirm final details with the organizer.</p></footer>
 
     <dialog id="event-dialog"><button class="close" type="button" aria-label="Close event details">×</button><div id="event-detail"></div><p class="share-status" id="share-status" role="status"></p></dialog>
     <dialog id="submit-dialog" class="submission-dialog">
@@ -132,6 +138,7 @@
         <button class="primary" type="submit">Request a free spotlight</button>
       </form>
     </dialog>
+    <script src="/pwa.js" defer></script>
     <script src="/app.js" defer></script>
   </body>
 </html>

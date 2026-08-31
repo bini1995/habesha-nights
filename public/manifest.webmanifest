@@ -1,0 +1,20 @@
+{
+  "name": "Habesha Nights",
+  "short_name": "Habesha",
+  "description": "Discover Ethiopian and Eritrean-adjacent events across NYC and the DC/DMV.",
+  "id": "/",
+  "start_url": "/?source=direct",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5efe2",
+  "theme_color": "#174d3b",
+  "categories": ["events", "entertainment", "lifestyle"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Discover events", "short_name": "Discover", "url": "/#events", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
