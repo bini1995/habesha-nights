@@ -394,7 +394,7 @@ async function eventPage(request, env, url, slug) {
   const row = await getEventRow(env, clean(slug, 220));
   if (!row) return new Response("Event not found.", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
   const event = publicEvent(row);
-  const templateResponse = await fetchAsset(request, env, url, "/event.html");
+  const templateResponse = await fetchAsset(request, env, url, "/event");
   if (!templateResponse.ok) return templateResponse;
   const canonicalUrl = `${url.origin}/events/${encodeURIComponent(event.slug)}`;
   const description = clean(event.summary || event.description, 240).replace(/\s+/g, " ");
@@ -437,7 +437,7 @@ async function eventPage(request, env, url, slug) {
 
 async function serveAsset(request, env, url) {
   const target = url.pathname === "/" ? "/index.html" : url.pathname === "/admin" ? "/admin/index.html" : url.pathname;
-  if (target === "/event.html") return new Response("Not found.", { status: 404 });
+  if (target === "/event" || target === "/event.html") return new Response("Not found.", { status: 404 });
   let response = await fetchAsset(request, env, url, target);
   if (response.status === 404 && !target.includes(".")) response = await fetchAsset(request, env, url, "/index.html");
   if (target === "/index.html" && response.ok) {
