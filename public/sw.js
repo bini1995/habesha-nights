@@ -1,4 +1,4 @@
-const CACHE = "habesha-nights-v1";
+const CACHE = "habesha-nights-v2";
 const APP_SHELL = [
   "/",
   "/styles.css",
@@ -10,6 +10,26 @@ const APP_SHELL = [
   "/icons/icon-192.png",
   "/icons/icon-512.png"
 ];
+const NETWORK_FIRST_ASSETS = new Set(["/styles.css", "/app.js", "/event-page.js", "/pwa.js", "/manifest.webmanifest"]);
+
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok) await cache.put(request, response.clone());
+    return response;
+  } catch {
+    return (await cache.match(request)) || Response.error();
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) await (await caches.open(CACHE)).put(request, response.clone());
+  return response;
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
@@ -28,8 +48,9 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(fetch(request).catch(() => caches.match(request).then((response) => response || caches.match("/offline.html"))));
     return;
   }
-  event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => {
-    if (response.ok) caches.open(CACHE).then((cache) => cache.put(request, response.clone()));
-    return response;
-  })));
+  if (NETWORK_FIRST_ASSETS.has(url.pathname)) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+  event.respondWith(cacheFirst(request));
 });

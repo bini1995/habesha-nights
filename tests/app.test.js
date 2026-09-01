@@ -72,6 +72,9 @@ test("approved events and reference data are public", () => withServer(async (ba
   assert.match(page, /This week in NYC \+ DMV/);
   assert.match(page, /data-roundup-city="NYC"/);
   assert.match(page, /data-roundup-city="DMV"/);
+  const serviceWorker = await (await fetch(`${base}/sw.js`)).text();
+  assert.match(serviceWorker, /habesha-nights-v2/);
+  assert.match(serviceWorker, /NETWORK_FIRST_ASSETS/);
   const adminPage = await (await fetch(`${base}/admin/`)).text();
   assert.match(adminPage, /Traction scoreboard/);
   assert.match(adminPage, /goal-grid/);
