@@ -59,5 +59,5 @@ document.addEventListener("click", async (event) => {
   dialog.showModal();
 });
 
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=20260901-p7", { updateViaCache: "none" }).catch(() => {}));
 updateInstallButtons();

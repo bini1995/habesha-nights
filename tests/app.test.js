@@ -68,6 +68,7 @@ test("approved events and reference data are public", () => withServer(async (ba
   assert.doesNotMatch(page, /Get featured · \$39/);
   assert.match(page, /rel="manifest" href="\/manifest\.webmanifest"/);
   assert.match(page, /data-install-app/);
+  assert.match(page, /app\.js\?v=20260901-p7/);
   assert.match(page, /name="google-site-verification"/);
   assert.match(page, /This week in NYC \+ DMV/);
   assert.match(page, /data-roundup-city="NYC"/);
@@ -75,6 +76,7 @@ test("approved events and reference data are public", () => withServer(async (ba
   const serviceWorker = await (await fetch(`${base}/sw.js`)).text();
   assert.match(serviceWorker, /habesha-nights-v2/);
   assert.match(serviceWorker, /NETWORK_FIRST_ASSETS/);
+  assert.match(await (await fetch(`${base}/pwa.js`)).text(), /sw\.js\?v=20260901-p7/);
   const adminPage = await (await fetch(`${base}/admin/`)).text();
   assert.match(adminPage, /Traction scoreboard/);
   assert.match(adminPage, /goal-grid/);

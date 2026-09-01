@@ -1,10 +1,10 @@
 const CACHE = "habesha-nights-v2";
 const APP_SHELL = [
   "/",
-  "/styles.css",
-  "/app.js",
-  "/event-page.js",
-  "/pwa.js",
+  "/styles.css?v=20260901-p7",
+  "/app.js?v=20260901-p7",
+  "/event-page.js?v=20260901-p7",
+  "/pwa.js?v=20260901-p7",
   "/manifest.webmanifest",
   "/offline.html",
   "/icons/icon-192.png",
