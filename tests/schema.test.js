@@ -7,6 +7,8 @@ const migration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrat
 const launchMigration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20260828010000_launch_analytics_claims.sql"), "utf8");
 const seedMigration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20260828020000_verified_launch_events.sql"), "utf8");
 const tractionCatalogMigration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20260901000000_phase5_traction_catalog.sql"), "utf8");
+const densityCatalogMigration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20260901010000_phase6_catalog_density.sql"), "utf8");
+const outreachQueue = fs.readFileSync(path.join(__dirname, "..", "docs", "ORGANIZER_OUTREACH_PHASE6.csv"), "utf8").trim().split("\n");
 
 test("marketplace migration creates every Phase 2 table", () => {
   for (const table of ["events", "organizers", "venues", "businesses", "cities", "event_categories", "outbound_clicks", "submissions"]) {
@@ -37,6 +39,22 @@ test("traction catalog adds seven source-checked NYC and DMV listings", () => {
   assert.match(tractionCatalogMigration, /Sounds of East Africa/);
   assert.match(tractionCatalogMigration, /Ethiopian Fall Festival/);
   assert.doesNotMatch(tractionCatalogMigration, /example\.com/i);
+});
+
+test("catalog density migration adds 16 current listings and corrects the restaurant festival date", () => {
+  const insertedEventIds = densityCatalogMigration.match(/'30000000-0000-4000-8000-0000000000(?:3[8-9]|4[0-9]|5[0-3])'/g) || [];
+  assert.equal(insertedEventIds.length, 16);
+  assert.equal((densityCatalogMigration.match(/'2026-09-01T20:00:00Z'/g) || []).length, 17);
+  assert.match(densityCatalogMigration, /The Leeben Tinos Trio at Bunna Cafe/);
+  assert.match(densityCatalogMigration, /Black Gov Tech CBC Mixer at Sost/);
+  assert.match(densityCatalogMigration, /African Diaspora Festival/);
+  assert.match(densityCatalogMigration, /2026-10-09T16:00:00Z/);
+  assert.doesNotMatch(densityCatalogMigration, /example\.com/i);
+});
+
+test("Phase 6 outreach queue contains ten attributed organizer links", () => {
+  assert.equal(outreachQueue.length, 11);
+  for (const row of outreachQueue.slice(1)) assert.match(row, /source=organizer/);
 });
 
 test("moderation, RLS, approval transaction, and flyer bucket are migration-backed", () => {

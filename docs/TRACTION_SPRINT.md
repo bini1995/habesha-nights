@@ -25,6 +25,14 @@ The dashboard cannot know whether an organizer was contacted before they interac
 - 16 more current listings are still needed to reach the target of 50
 - Google Search Console ownership is verified, the sitemap is accepted, and the first event page is in the priority crawl queue
 
+## Phase 6 catalog checkpoint — September 1, 2026
+
+- 16 additional source-checked events are ready in the Phase 6 migration
+- the batch is split evenly between NYC and the DMV
+- the live upcoming catalog reaches 50 after the Phase 6 migration
+- the first ten organizer prospects are prioritized in `docs/ORGANIZER_OUTREACH_PHASE6.csv`
+- the New York African Restaurant Week Festival date is corrected to October 9–11 from its current ticket source
+
 Do not fill the gap with weak or stale listings. Every addition needs a current organizer or ticket source, a confirmed date, a valid location, and a link that can be rechecked before it is promoted.
 
 ## Campaign links
