@@ -38,6 +38,7 @@ function fakeMarketplace() {
     moderateClaim: async (id, status) => ({ id, status }),
     updatePromotionRequest: async (id, status) => ({ id, status }),
     getAnalytics: async () => [{ id: "event-1", title: "Ethiopian New Year", views: 412, uniqueVisitors: 300, ticketClicks: 87, clickThroughRate: 21.1, traffic: [{ source: "instagram", percentage: 48 }] }],
+    getTractionSummary: async () => ({ publishedEvents: 27, eventViews: 412, uniqueVisitors: 300, ticketClicks: 87, organizerActivations: 2, spotlightRequests: 1 }),
     resolveTicket: async (slug) => slug === "new-year" ? "https://tickets.example.com/new-year" : null
   };
 }
@@ -68,6 +69,9 @@ test("approved events and reference data are public", () => withServer(async (ba
   assert.match(page, /rel="manifest" href="\/manifest\.webmanifest"/);
   assert.match(page, /data-install-app/);
   assert.match(page, /name="google-site-verification"/);
+  const adminPage = await (await fetch(`${base}/admin/`)).text();
+  assert.match(adminPage, /Traction scoreboard/);
+  assert.match(adminPage, /goal-grid/);
 }));
 
 test("each event has a focused search page with Event structured data", () => withServer(async (base) => {
@@ -112,6 +116,9 @@ test("views, claims, promotions, and analytics support the traction loop", () =>
   const response = await fetch(`${base}/api/admin/analytics`, { headers: { Authorization: "Bearer phase-two-secret" } });
   assert.equal(response.status, 200);
   assert.equal((await response.json()).events[0].clickThroughRate, 21.1);
+  const traction = await fetch(`${base}/api/admin/traction`, { headers: { Authorization: "Bearer phase-two-secret" } });
+  assert.equal(traction.status, 200);
+  assert.equal((await traction.json()).summary.publishedEvents, 27);
 }));
 
 test("retired sports and watch APIs remain gone", () => withServer(async (base) => {

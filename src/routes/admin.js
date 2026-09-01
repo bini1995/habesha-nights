@@ -23,6 +23,7 @@ function createAdminRouter({ marketplace, adminToken }) {
   router.post("/submissions/:id/approve", asyncRoute(async (request, response) => response.json({ eventId: await marketplace.approveSubmission(request.params.id) })));
   router.post("/submissions/:id/reject", asyncRoute(async (request, response) => response.json({ submission: await marketplace.rejectSubmission(request.params.id, request.body?.reviewNotes) })));
   router.get("/analytics", asyncRoute(async (request, response) => response.json({ events: await marketplace.getAnalytics() })));
+  router.get("/traction", asyncRoute(async (request, response) => response.json({ summary: await marketplace.getTractionSummary() })));
   router.get("/claims", asyncRoute(async (request, response) => response.json({ claims: await marketplace.listClaims(request.query.status || "pending") })));
   router.post("/claims/:id/:status", asyncRoute(async (request, response) => response.json({ claim: await marketplace.moderateClaim(request.params.id, request.params.status, request.body?.reviewNotes) })));
   router.get("/promotion-requests", asyncRoute(async (request, response) => response.json({ requests: await marketplace.listPromotionRequests(request.query.status || "pending") })));

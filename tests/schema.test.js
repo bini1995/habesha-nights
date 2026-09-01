@@ -6,6 +6,7 @@ const test = require("node:test");
 const migration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20260828000000_real_event_marketplace.sql"), "utf8");
 const launchMigration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20260828010000_launch_analytics_claims.sql"), "utf8");
 const seedMigration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20260828020000_verified_launch_events.sql"), "utf8");
+const tractionCatalogMigration = fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", "20260901000000_phase5_traction_catalog.sql"), "utf8");
 
 test("marketplace migration creates every Phase 2 table", () => {
   for (const table of ["events", "organizers", "venues", "businesses", "cities", "event_categories", "outbound_clicks", "submissions"]) {
@@ -27,6 +28,15 @@ test("launch migration adds attribution, claims, and manual promotion leads", ()
   assert.match(launchMigration, /alter table public\.outbound_clicks\s+add column source/is);
   assert.match(launchMigration, /instagram.*tiktok.*google.*organizer.*whatsapp.*direct/s);
   assert.match(launchMigration, /quoted_price_cents integer not null default 3900/i);
+});
+
+test("traction catalog adds seven source-checked NYC and DMV listings", () => {
+  assert.equal((tractionCatalogMigration.match(/'30000000-0000-4000-8000-[0-9]{12}'/g) || []).length, 7);
+  assert.equal((tractionCatalogMigration.match(/'2026-09-01T18:00:00Z'/g) || []).length, 7);
+  assert.match(tractionCatalogMigration, /Ethiopian Day 2026/);
+  assert.match(tractionCatalogMigration, /Sounds of East Africa/);
+  assert.match(tractionCatalogMigration, /Ethiopian Fall Festival/);
+  assert.doesNotMatch(tractionCatalogMigration, /example\.com/i);
 });
 
 test("moderation, RLS, approval transaction, and flyer bucket are migration-backed", () => {

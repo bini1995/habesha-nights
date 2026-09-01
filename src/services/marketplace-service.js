@@ -214,7 +214,33 @@ function createMarketplaceService({ supabase, config }) {
     })).sort((a, b) => b.views - a.views || b.ticketClicks - a.ticketClicks);
   }
 
-  return { configured: true, approveSubmission, createClaim, createPromotionRequest, createSubmission, getAnalytics, getEvent, listBusinesses, listClaims, listEvents, listPromotionRequests, listReferenceData, listSubmissions, moderateClaim, recordEventView, rejectSubmission, resolveTicket, updatePromotionRequest, updateSubmission };
+  async function getTractionSummary() {
+    const now = new Date().toISOString();
+    const [eventsResult, clicksResult, viewsResult, claimsResult, submissionsResult, promotionsResult] = await Promise.all([
+      supabase.from("events").select("id").eq("status", "approved").gte("starts_at", now),
+      supabase.from("outbound_clicks").select("id"),
+      supabase.from("event_views").select("id, visitor_id"),
+      supabase.from("event_claims").select("id, contact_email").neq("status", "rejected"),
+      supabase.from("submissions").select("id, contact_email").neq("status", "rejected"),
+      supabase.from("promotion_requests").select("id").neq("status", "rejected")
+    ]);
+    const views = unwrap(viewsResult);
+    const organizerContacts = new Set([
+      ...unwrap(claimsResult).map((item) => item.contact_email?.toLowerCase()).filter(Boolean),
+      ...unwrap(submissionsResult).map((item) => item.contact_email?.toLowerCase()).filter(Boolean)
+    ]);
+    const uniqueVisitors = new Set(views.map((view) => view.visitor_id || `anonymous-${view.id}`));
+    return {
+      publishedEvents: unwrap(eventsResult).length,
+      eventViews: views.length,
+      uniqueVisitors: uniqueVisitors.size,
+      ticketClicks: unwrap(clicksResult).length,
+      organizerActivations: organizerContacts.size,
+      spotlightRequests: unwrap(promotionsResult).length
+    };
+  }
+
+  return { configured: true, approveSubmission, createClaim, createPromotionRequest, createSubmission, getAnalytics, getEvent, getTractionSummary, listBusinesses, listClaims, listEvents, listPromotionRequests, listReferenceData, listSubmissions, moderateClaim, recordEventView, rejectSubmission, resolveTicket, updatePromotionRequest, updateSubmission };
 }
 
 function createUnconfiguredMarketplaceService() {
@@ -230,6 +256,7 @@ function createUnconfiguredMarketplaceService() {
     createPromotionRequest: unavailable,
     createSubmission: unavailable,
     getAnalytics: unavailable,
+    getTractionSummary: unavailable,
     listClaims: unavailable,
     listPromotionRequests: unavailable,
     listSubmissions: unavailable,

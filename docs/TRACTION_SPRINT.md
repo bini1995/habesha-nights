@@ -4,7 +4,7 @@ This is a two-week operating sprint, not a product-build phase. The objective is
 
 ## Scoreboard
 
-Track these numbers daily from `/admin/`:
+Track these numbers daily from `/admin/`. The dashboard now shows automatic progress for every product-measurable goal and generates attributed campaign links for each event.
 
 | Goal | Target |
 | --- | ---: |
@@ -14,6 +14,18 @@ Track these numbers daily from `/admin/`:
 | Unique visitors | 500 |
 | Outbound ticket clicks | 100 |
 | Free launch spotlight requests | 3 |
+
+The dashboard cannot know whether an organizer was contacted before they interact. Keep the `10 organizers contacted` target in the outreach sheet, and use claims/submissions as the measurable activation result.
+
+## Sprint starting point — September 1, 2026
+
+- 27 upcoming events are live before the Phase 5 catalog migration
+- 7 additional source-checked events are ready in the Phase 5 migration
+- 34 upcoming listings will be live after the migration
+- 16 more current listings are still needed to reach the target of 50
+- Google Search Console ownership is verified, the sitemap is accepted, and the first event page is in the priority crawl queue
+
+Do not fill the gap with weak or stale listings. Every addition needs a current organizer or ticket source, a confirmed date, a valid location, and a link that can be rechecked before it is promoted.
 
 ## Campaign links
 
@@ -33,7 +45,7 @@ Use `source=google` for search campaigns and omit the source for genuinely direc
 1. Recheck every currently published event against its source and ticket page. Remove or update stale listings.
 2. Add 20 more upcoming events, keeping the catalog limited to NYC and the DC/DMV.
 3. Select ten organizers whose events have complete details and active ticket links.
-4. Send each organizer their direct `source=organizer` event link.
+4. Copy each organizer’s direct `source=organizer` event link from the event performance card in `/admin/` and send it with the listing note.
 5. Publish three Instagram posts and one weekend roundup. Use the event-specific share link in every call to action.
 6. Record replies, corrections, claims, new submissions, and follow-up dates in one simple outreach sheet.
 

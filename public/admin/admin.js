@@ -48,11 +48,39 @@ function promotionCard(item) {
   </article>`;
 }
 
+const tractionGoals = [
+  { key: "publishedEvents", label: "Upcoming events", target: 50 },
+  { key: "uniqueVisitors", label: "Unique visitors", target: 500 },
+  { key: "ticketClicks", label: "Ticket clicks", target: 100 },
+  { key: "organizerActivations", label: "Claims or submissions", target: 5 },
+  { key: "spotlightRequests", label: "Spotlight requests", target: 3 }
+];
+
+function renderScoreboard(summary) {
+  document.querySelector("#goal-grid").innerHTML = tractionGoals.map((goal) => {
+    const value = Number(summary[goal.key] || 0);
+    const progress = Math.min(100, Math.round((value / goal.target) * 100));
+    return `<article class="goal-card ${progress >= 100 ? "complete" : ""}">
+      <div><span>${escapeHtml(goal.label)}</span><strong>${value}<small> / ${goal.target}</small></strong></div>
+      <div class="goal-track" aria-label="${escapeHtml(goal.label)}: ${progress}% of target"><span style="width:${progress}%"></span></div>
+      <p>${progress}% of target</p>
+    </article>`;
+  }).join("");
+}
+
+function campaignLinks(event) {
+  return `<div class="campaign-links" aria-label="Campaign links for ${escapeHtml(event.title)}">
+    <span>Copy link:</span>
+    ${["organizer", "instagram", "whatsapp", "tiktok"].map((source) => `<button class="campaign-link" type="button" data-campaign-source="${source}" data-event-slug="${escapeHtml(event.slug)}">${source}</button>`).join("")}
+  </div>`;
+}
+
 async function loadDashboard() {
   document.querySelector("#queue-status").textContent = "Refreshing…";
-  const [{ submissions }, { events }, { claims }, { requests }] = await Promise.all([
-    adminApi("/api/admin/submissions"), adminApi("/api/admin/analytics"), adminApi("/api/admin/claims"), adminApi("/api/admin/promotion-requests")
+  const [{ submissions }, { events }, { claims }, { requests }, { summary }] = await Promise.all([
+    adminApi("/api/admin/submissions"), adminApi("/api/admin/analytics"), adminApi("/api/admin/claims"), adminApi("/api/admin/promotion-requests"), adminApi("/api/admin/traction")
   ]);
+  renderScoreboard(summary);
   document.querySelector("#pending-count").textContent = submissions.length;
   document.querySelector("#click-count").textContent = events.reduce((total, event) => total + event.ticketClicks, 0);
   document.querySelector("#view-count").textContent = events.reduce((total, event) => total + event.views, 0);
@@ -60,7 +88,7 @@ async function loadDashboard() {
   list.innerHTML = submissions.length ? submissions.map(submissionCard).join("") : '<div class="empty">No pending submissions. The queue is clear.</div>';
   document.querySelector("#claim-list").innerHTML = claims.length ? claims.map(claimCard).join("") : '<div class="empty">No pending ownership claims.</div>';
   document.querySelector("#promotion-list").innerHTML = requests.length ? requests.map(promotionCard).join("") : '<div class="empty">No featured placement requests.</div>';
-  document.querySelector("#analytics-list").innerHTML = events.length ? events.map((event) => `<article class="analytics-card"><h3>${escapeHtml(event.title)}</h3><div class="analytics-metrics"><span><strong>${event.views}</strong> views</span><span><strong>${event.uniqueVisitors}</strong> visitors</span><span><strong>${event.ticketClicks}</strong> clicks</span><span><strong>${event.clickThroughRate}%</strong> CTR</span></div><div class="traffic">${event.traffic.length ? event.traffic.map((item) => `<span>${escapeHtml(item.source)} ${item.percentage}%</span>`).join("") : "No traffic yet"}</div></article>`).join("") : '<div class="empty">No approved events yet.</div>';
+  document.querySelector("#analytics-list").innerHTML = events.length ? events.map((event) => `<article class="analytics-card"><h3>${escapeHtml(event.title)}</h3><div class="analytics-metrics"><span><strong>${event.views}</strong> views</span><span><strong>${event.uniqueVisitors}</strong> visitors</span><span><strong>${event.ticketClicks}</strong> clicks</span><span><strong>${event.clickThroughRate}%</strong> CTR</span></div><div class="traffic">${event.traffic.length ? event.traffic.map((item) => `<span>${escapeHtml(item.source)} ${item.percentage}%</span>`).join("") : "No traffic yet"}</div>${campaignLinks(event)}</article>`).join("") : '<div class="empty">No approved events yet.</div>';
   document.querySelector("#queue-status").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 }
 
@@ -122,4 +150,18 @@ document.querySelector("#promotion-list").addEventListener("click", async (click
   status.textContent = "Updating request…";
   try { await adminApi(`/api/admin/promotion-requests/${card.dataset.id}`, { method: "PUT", body: JSON.stringify({ status: button.dataset.promotionAction }) }); await loadDashboard(); }
   catch (error) { status.textContent = error.message; button.disabled = false; }
+});
+
+document.querySelector("#analytics-list").addEventListener("click", async (click) => {
+  const button = click.target.closest("[data-campaign-source]");
+  if (!button) return;
+  const url = new URL(`/events/${encodeURIComponent(button.dataset.eventSlug)}`, window.location.origin);
+  url.searchParams.set("source", button.dataset.campaignSource);
+  const status = document.querySelector("#copy-status");
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    status.textContent = `${button.dataset.campaignSource} link copied.`;
+  } catch {
+    status.textContent = url.toString();
+  }
 });
