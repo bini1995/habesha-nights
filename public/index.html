@@ -30,7 +30,7 @@
     <header>
       <nav aria-label="Main navigation">
         <a class="brand" href="/" aria-label="Habesha Nights home"><span>H</span> Habesha Nights</a>
-        <div class="nav-links"><a href="#events">Discover</a><a href="#businesses">Places</a><a href="#organizers">Organizers</a></div>
+        <div class="nav-links"><a href="#roundups">This week</a><a href="#events">Discover</a><a href="#businesses">Places</a><a href="#organizers">Organizers</a></div>
         <div class="nav-actions"><button class="install-button" type="button" data-install-app hidden>Get the app</button><button class="submit-button" type="button" data-open-submit>Submit an Event</button></div>
       </nav>
       <section class="hero">
@@ -49,6 +49,14 @@
     </header>
 
     <main>
+      <section class="roundups" id="roundups">
+        <div class="section-heading"><div><p class="eyebrow dark">Pick your market</p><h2>This week in NYC + DMV</h2></div><p>Two focused calendars, ready to share with the people you make plans with.</p></div>
+        <div class="roundup-grid">
+          <a class="roundup-card nyc" href="/?city=NYC#events" data-roundup-city="NYC"><span>New York City</span><strong>See the NYC lineup</strong><small>Nightlife · music · food · community <b>↗</b></small></a>
+          <a class="roundup-card dmv" href="/?city=DMV#events" data-roundup-city="DMV"><span>DC / DMV</span><strong>See the DMV lineup</strong><small>DC · Maryland · Northern Virginia <b>↗</b></small></a>
+        </div>
+      </section>
+
       <section class="discover" id="events">
         <div class="section-heading"><div><p class="eyebrow dark">Curated for the diaspora</p><h2>What’s happening</h2></div><p id="result-count" aria-live="polite">Loading events…</p></div>
         <form class="filters" id="filters" role="search">

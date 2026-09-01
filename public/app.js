@@ -1,4 +1,10 @@
-const state = { city: "", category: "", query: "" };
+const launchParams = new URLSearchParams(window.location.search);
+const requestedCity = ["NYC", "DMV"].includes(launchParams.get("city")) ? launchParams.get("city") : "";
+const state = {
+  city: requestedCity,
+  category: (launchParams.get("category") || "").slice(0, 80),
+  query: (launchParams.get("query") || "").slice(0, 120)
+};
 const eventGrid = document.querySelector("#event-grid");
 const eventState = document.querySelector("#event-state");
 const count = document.querySelector("#result-count");
@@ -6,7 +12,6 @@ const eventDialog = document.querySelector("#event-dialog");
 const submitDialog = document.querySelector("#submit-dialog");
 const claimDialog = document.querySelector("#claim-dialog");
 const promotionDialog = document.querySelector("#promotion-dialog");
-const launchParams = new URLSearchParams(window.location.search);
 const knownSources = new Set(["instagram", "tiktok", "google", "organizer", "whatsapp", "direct", "other"]);
 const source = knownSources.has((launchParams.get("source") || launchParams.get("utm_source") || "").toLowerCase())
   ? (launchParams.get("source") || launchParams.get("utm_source")).toLowerCase()
@@ -71,9 +76,31 @@ async function loadReferenceData() {
     document.querySelector("#submission-city").insertAdjacentHTML("beforeend", cities.map((city) => `<option value="${escapeHtml(city.id)}">${escapeHtml(city.name)}</option>`).join(""));
     document.querySelector("#submission-category").insertAdjacentHTML("beforeend", categories.map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`).join(""));
     document.querySelector("#category-filter").insertAdjacentHTML("beforeend", categories.map((category) => `<option value="${escapeHtml(category.slug)}">${escapeHtml(category.name)}</option>`).join(""));
+    const availableCategories = new Set(categories.map((category) => category.slug));
+    if (!availableCategories.has(state.category)) state.category = "";
+    document.querySelector("#category-filter").value = state.category;
   } catch {
     document.querySelector("#submission-status").textContent = "Event submissions will open as soon as the database connection is complete.";
   }
+}
+
+function syncBrowseUrl() {
+  const url = new URL(window.location.href);
+  url.pathname = "/";
+  url.searchParams.delete("event");
+  for (const [key, value] of Object.entries(state)) {
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+  }
+  history.replaceState({}, "", url);
+}
+
+function prepareRoundupLinks() {
+  document.querySelectorAll("[data-roundup-city]").forEach((link) => {
+    const url = new URL(link.getAttribute("href"), window.location.href);
+    if (source) url.searchParams.set("source", source);
+    link.href = `${url.pathname}${url.search}${url.hash}`;
+  });
 }
 
 function eventUrl(slug, attributedSource = source) {
@@ -106,13 +133,14 @@ document.querySelectorAll("[data-city]").forEach((button) => button.addEventList
   document.querySelectorAll("[data-city]").forEach((item) => item.classList.remove("active"));
   button.classList.add("active");
   state.city = button.dataset.city;
+  syncBrowseUrl();
   loadEvents();
 }));
-document.querySelector("[name=category]").addEventListener("change", (event) => { state.category = event.target.value; loadEvents(); });
+document.querySelector("[name=category]").addEventListener("change", (event) => { state.category = event.target.value; syncBrowseUrl(); loadEvents(); });
 let searchTimer;
 document.querySelector("[name=query]").addEventListener("input", (event) => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => { state.query = event.target.value; loadEvents(); }, 220);
+  searchTimer = setTimeout(() => { state.query = event.target.value.trim(); syncBrowseUrl(); loadEvents(); }, 220);
 });
 
 document.querySelectorAll("dialog .close").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
@@ -206,6 +234,9 @@ api("/api/businesses").then(({ businesses }) => {
     : '<div class="empty-businesses">Approved community businesses will appear here.</div>';
 }).catch(() => {});
 
+document.querySelectorAll("[data-city]").forEach((button) => button.classList.toggle("active", button.dataset.city === state.city));
+document.querySelector("[name=query]").value = state.query;
+prepareRoundupLinks();
 loadReferenceData();
 loadEvents().then(() => {
   if (requestedEvent) openEvent(requestedEvent, false);

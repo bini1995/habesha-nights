@@ -39,7 +39,19 @@ h1,h2,h3{font-family:Georgia,"Times New Roman",serif}
 .ticker{display:flex;justify-content:center;gap:0;overflow:hidden;border-block:1px solid var(--line);background:var(--cream)}
 .ticker span{padding:16px 30px;color:var(--green);font-family:Georgia,serif;white-space:nowrap}
 .ticker span::before{content:"◆";margin-right:28px;color:var(--gold);font-size:.55rem}
-.discover,.places{max-width:1280px;margin:auto;padding:90px 30px}
+.roundups,.discover,.places{max-width:1280px;margin:auto;padding:90px 30px}
+.roundups{padding-bottom:0}
+.roundup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.roundup-card{position:relative;display:grid;min-height:260px;align-content:end;overflow:hidden;border-radius:4px;padding:28px;color:#fff;text-decoration:none;isolation:isolate;transition:transform .2s,box-shadow .2s}
+.roundup-card::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(135deg,rgba(0,0,0,.05),rgba(0,0,0,.4))}
+.roundup-card::after{content:"";position:absolute;width:210px;height:210px;right:-45px;top:-60px;z-index:-1;border:1px solid rgba(255,255,255,.28);border-radius:50%;box-shadow:0 0 0 34px rgba(255,255,255,.06),0 0 0 68px rgba(255,255,255,.04)}
+.roundup-card.nyc{background:var(--red)}
+.roundup-card.dmv{background:var(--green)}
+.roundup-card:hover{transform:translateY(-3px);box-shadow:0 18px 45px rgba(42,36,25,.14)}
+.roundup-card>span{margin-bottom:10px;font-size:.7rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+.roundup-card>strong{font-family:Georgia,serif;font-size:clamp(2rem,4vw,3.3rem);font-weight:500;letter-spacing:-.04em}
+.roundup-card>small{display:flex;justify-content:space-between;gap:16px;margin-top:35px;border-top:1px solid rgba(255,255,255,.35);padding-top:15px;font-size:.76rem;font-weight:750}
+.roundup-card b{font-size:1rem}
 .section-heading{display:flex;align-items:end;justify-content:space-between;gap:30px;margin-bottom:30px}
 .section-heading h2,.organizer-band h2,dialog h2{margin:0;font-size:clamp(2.4rem,5vw,4.2rem);font-weight:500;letter-spacing:-.04em}
 .section-heading>p{max-width:420px;color:var(--muted);line-height:1.6}
@@ -148,7 +160,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .hero h1{font-size:3.7rem}
 .hero-actions{align-items:flex-start;flex-direction:column}
 .ticker{justify-content:flex-start}
-.discover,.places{padding:65px 18px}
+.roundups,.discover,.places{padding:65px 18px}
+.roundups{padding-bottom:0}
+.roundup-grid{grid-template-columns:1fr}
+.roundup-card{min-height:230px;padding:22px}
 .section-heading{align-items:flex-start;flex-direction:column}
 .filters{grid-template-columns:1fr;padding-inline:0}
 .city-tabs{overflow-x:auto}

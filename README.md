@@ -2,6 +2,12 @@
 
 Habesha Nights is a moderated marketplace for discovering Ethiopian and Eritrean-adjacent diaspora events, nightlife, food, artists, businesses, and community happenings. The launch markets are New York City and the Washington, DC / DMV area.
 
+## Phase 7 — Distribution Launch
+
+The marketplace now has dedicated, shareable NYC and DMV roundup entry points. City, category, and search filters survive in the URL, and source attribution stays attached as visitors move from a weekly roundup into event pages and tracked ticket links.
+
+The private admin dashboard includes a publishing desk that generates Instagram, WhatsApp, TikTok, and Google links for each market. The first-week channel schedule and ready-to-use copy live in `docs/DISTRIBUTION_WEEK1.md`. This phase prepares distribution; it does not send messages or publish social posts automatically.
+
 ## Phase 6 — Catalog Density and Organizer Outreach
 
 The traction sprint now has a complete first operating batch:

@@ -69,9 +69,14 @@ test("approved events and reference data are public", () => withServer(async (ba
   assert.match(page, /rel="manifest" href="\/manifest\.webmanifest"/);
   assert.match(page, /data-install-app/);
   assert.match(page, /name="google-site-verification"/);
+  assert.match(page, /This week in NYC \+ DMV/);
+  assert.match(page, /data-roundup-city="NYC"/);
+  assert.match(page, /data-roundup-city="DMV"/);
   const adminPage = await (await fetch(`${base}/admin/`)).text();
   assert.match(adminPage, /Traction scoreboard/);
   assert.match(adminPage, /goal-grid/);
+  assert.match(adminPage, /Distribution links/);
+  assert.match(adminPage, /roundup-link-grid/);
 }));
 
 test("each event has a focused search page with Event structured data", () => withServer(async (base) => {

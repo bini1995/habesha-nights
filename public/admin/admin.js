@@ -5,6 +5,7 @@ const list = document.querySelector("#submission-list");
 const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
 const dateTimeLocal = (value) => value ? new Date(new Date(value).getTime() - new Date(value).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "";
 const formatDate = (value) => new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+const publicSiteOrigin = "https://habesha.clarifyops.com";
 
 async function adminApi(path, options = {}) {
   const response = await fetch(path, { ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}`, ...(options.headers || {}) } });
@@ -101,6 +102,22 @@ document.querySelector("#login-form").addEventListener("submit", async (submit) 
   catch (error) { adminToken = ""; status.textContent = error.message; }
 });
 document.querySelector("#refresh").addEventListener("click", () => loadDashboard().catch((error) => { document.querySelector("#queue-status").textContent = error.message; }));
+
+document.querySelector(".roundup-link-grid").addEventListener("click", async (click) => {
+  const button = click.target.closest("[data-roundup-city][data-roundup-source]");
+  if (!button) return;
+  const url = new URL("/", publicSiteOrigin);
+  url.searchParams.set("city", button.dataset.roundupCity);
+  url.searchParams.set("source", button.dataset.roundupSource);
+  url.hash = "events";
+  const status = document.querySelector("#roundup-copy-status");
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    status.textContent = `${button.dataset.roundupCity} ${button.dataset.roundupSource} roundup copied.`;
+  } catch {
+    status.textContent = url.toString();
+  }
+});
 
 list.addEventListener("click", async (click) => {
   const button = click.target.closest("[data-action]");

@@ -17,13 +17,21 @@
       </section>
 
       <section id="dashboard" hidden>
-        <div class="dashboard-heading"><div><p class="eyebrow">Phase 5 · Prove demand</p><h1>Marketplace control room</h1></div><button class="secondary" id="refresh" type="button">Refresh</button></div>
+        <div class="dashboard-heading"><div><p class="eyebrow">Phase 7 · Distribution launch</p><h1>Marketplace control room</h1></div><button class="secondary" id="refresh" type="button">Refresh</button></div>
         <section class="scoreboard" aria-labelledby="scoreboard-heading">
           <div class="section-heading"><div><p class="eyebrow">Two-week launch sprint</p><h2 id="scoreboard-heading">Traction scoreboard</h2></div><p>Green means the validation target is reached.</p></div>
           <div class="goal-grid" id="goal-grid"></div>
           <p class="scoreboard-note">Organizer outreach is tracked separately; the product measures the actions that matter afterward: claims and submissions.</p>
         </section>
         <div class="metrics"><article><span>Pending submissions</span><strong id="pending-count">0</strong></article><article><span>Event views</span><strong id="view-count">0</strong></article><article><span>Ticket clicks</span><strong id="click-count">0</strong></article><article><span>Ownership claims</span><strong id="claim-count">0</strong></article></div>
+        <section class="distribution-section" aria-labelledby="distribution-heading">
+          <div class="section-heading"><div><p class="eyebrow">Weekly publishing desk</p><h2 id="distribution-heading">Distribution links</h2></div><p>Copy a city roundup for the channel you are posting to. Visits remain attributed through event discovery and ticket clicks.</p></div>
+          <div class="roundup-link-grid">
+            <article><span>NYC roundup</span><strong>New York this week</strong><div class="roundup-actions"><button type="button" data-roundup-city="NYC" data-roundup-source="instagram">Instagram</button><button type="button" data-roundup-city="NYC" data-roundup-source="whatsapp">WhatsApp</button><button type="button" data-roundup-city="NYC" data-roundup-source="tiktok">TikTok</button><button type="button" data-roundup-city="NYC" data-roundup-source="google">Google</button></div></article>
+            <article><span>DMV roundup</span><strong>DC / DMV this week</strong><div class="roundup-actions"><button type="button" data-roundup-city="DMV" data-roundup-source="instagram">Instagram</button><button type="button" data-roundup-city="DMV" data-roundup-source="whatsapp">WhatsApp</button><button type="button" data-roundup-city="DMV" data-roundup-source="tiktok">TikTok</button><button type="button" data-roundup-city="DMV" data-roundup-source="google">Google</button></div></article>
+          </div>
+          <p class="copy-status" id="roundup-copy-status" role="status"></p>
+        </section>
         <div class="layout">
           <section><div class="section-heading"><h2>Pending submissions</h2><p id="queue-status" role="status"></p></div><div id="submission-list" class="submission-list"></div></section>
           <aside><h2>Organizer claims</h2><p>Verify an ownership request before marking the organizer as trusted.</p><div id="claim-list" class="submission-list compact-list"></div><h2>Featured requests</h2><p>Free launch spotlights and future paid-placement leads.</p><div id="promotion-list" class="submission-list compact-list"></div></aside>
