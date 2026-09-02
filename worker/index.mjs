@@ -248,13 +248,15 @@ async function metadata(env, request, requestedSource, requestedReferrer) {
   };
 }
 
-function authorized(request, env) {
+async function authorized(request, env) {
   const supplied = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const expected = env.ADMIN_TOKEN || "";
-  if (!supplied || !expected || supplied.length !== expected.length) return false;
-  let mismatch = 0;
-  for (let index = 0; index < supplied.length; index += 1) mismatch |= supplied.charCodeAt(index) ^ expected.charCodeAt(index);
-  return mismatch === 0;
+  const encoder = new TextEncoder();
+  const [suppliedHash, expectedHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(supplied)),
+    crypto.subtle.digest("SHA-256", encoder.encode(expected))
+  ]);
+  return Boolean(supplied && expected) && crypto.subtle.timingSafeEqual(suppliedHash, expectedHash);
 }
 
 async function bodyJson(request) { return request.json().catch(() => ({})); }
@@ -335,8 +337,33 @@ async function analytics(env) {
   return [...rows.values()].map((item) => ({ ...item, visitors: undefined, uniqueVisitors: item.visitors.size, clickThroughRate: item.views ? Math.round(item.ticketClicks / item.views * 1000) / 10 : 0, traffic: Object.entries(item.traffic).map(([source, count]) => ({ source, views: count, percentage: Math.round(count / item.views * 100) })).sort((a, b) => b.views - a.views) })).sort((a, b) => b.views - a.views || b.ticketClicks - a.ticketClicks);
 }
 
+async function tractionSummary(env) {
+  const now = new Date().toISOString();
+  const [events, clicks, views, claims, submissions, promotions] = await Promise.all([
+    database(env, `/rest/v1/events?${queryString({ select: "id", status: "eq.approved", starts_at: `gte.${now}` })}`),
+    database(env, "/rest/v1/outbound_clicks?select=id"),
+    database(env, "/rest/v1/event_views?select=id,visitor_id"),
+    database(env, "/rest/v1/event_claims?select=id,contact_email&status=neq.rejected"),
+    database(env, "/rest/v1/submissions?select=id,contact_email&status=neq.rejected"),
+    database(env, "/rest/v1/promotion_requests?select=id&status=neq.rejected")
+  ]);
+  const organizerContacts = new Set([
+    ...claims.map((item) => item.contact_email?.toLowerCase()).filter(Boolean),
+    ...submissions.map((item) => item.contact_email?.toLowerCase()).filter(Boolean)
+  ]);
+  const uniqueVisitors = new Set(views.map((view) => view.visitor_id || `anonymous-${view.id}`));
+  return {
+    publishedEvents: events.length,
+    eventViews: views.length,
+    uniqueVisitors: uniqueVisitors.size,
+    ticketClicks: clicks.length,
+    organizerActivations: organizerContacts.size,
+    spotlightRequests: promotions.length
+  };
+}
+
 async function handleAdminApi(request, env, url, segments) {
-  if (!authorized(request, env)) return json({ error: env.ADMIN_TOKEN ? "Admin token is invalid." : "Admin access is not configured." }, env.ADMIN_TOKEN ? 401 : 503);
+  if (!(await authorized(request, env))) return json({ error: env.ADMIN_TOKEN ? "Admin token is invalid." : "Admin access is not configured." }, env.ADMIN_TOKEN ? 401 : 503);
   if (url.pathname === "/api/admin/submissions" && request.method === "GET") {
     const status = clean(url.searchParams.get("status"), 20) || "pending";
     return json({ submissions: await database(env, `/rest/v1/submissions?${queryString({ select: "*,cities(id,name,short_code),event_categories(id,name,slug)", status: `eq.${status}`, order: "created_at.asc" })}`) });
@@ -356,6 +383,7 @@ async function handleAdminApi(request, env, url, segments) {
     return json({ submission: rows[0] });
   }
   if (url.pathname === "/api/admin/analytics" && request.method === "GET") return json({ events: await analytics(env) });
+  if (url.pathname === "/api/admin/traction" && request.method === "GET") return json({ summary: await tractionSummary(env) });
   if (url.pathname === "/api/admin/claims" && request.method === "GET") {
     const status = clean(url.searchParams.get("status"), 20) || "pending";
     return json({ claims: await database(env, `/rest/v1/event_claims?${queryString({ select: "*,events(id,slug,title,organizers(name))", status: `eq.${status}`, order: "created_at.asc" })}`) });
